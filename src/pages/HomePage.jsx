@@ -95,7 +95,7 @@ const HomePage = () => {
           marginBottom: "36px",
         }}
       >
-        {actions.map((action) => {
+        {actions.map((action, index) => {
           const content = (
             <article
               style={{
@@ -122,7 +122,7 @@ const HomePage = () => {
                   marginBottom: "16px",
                 }}
               >
-                {actions.indexOf(action) + 1}
+                {index + 1}
               </div>
               <h3 style={{ color: "#2c3e50", marginBottom: "12px", fontSize: "1.2rem" }}>
                 {action.title}

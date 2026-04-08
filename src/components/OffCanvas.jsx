@@ -30,7 +30,6 @@ function Example() {
         { id: "p1i13", label: "Environmental Insight" },
         { id: "p1i14", label: "Plastic vs Plastic Waste" },
         { id: "p1i15", label: "Why Plastic Pollution is Rising" },
-
       ],
     },
     {
@@ -139,7 +138,6 @@ function Example() {
 
   return (
     <>
-      {/* Floating Button */}
       <div
         style={{
           position: "fixed",
@@ -173,7 +171,6 @@ function Example() {
         </Button>
       </div>
 
-      {/* Offcanvas */}
       <Offcanvas
         show={show}
         onHide={handleClose}
@@ -188,21 +185,18 @@ function Example() {
 
         <Offcanvas.Body>
           <div className="d-flex flex-column gap-3">
-
             {data.map((item, index) => (
               <div
                 key={index}
                 style={{ position: "relative" }}
               >
-                {/* Main Link */}
                 <Link
                   to={item.to}
                   onClick={(e) => {
-                    // toggle dropdown instead of navigating immediately
                     if (activeIndex === index) {
                       setActiveIndex(null);
                     } else {
-                      e.preventDefault(); // stop navigation
+                      e.preventDefault();
                       setActiveIndex(index);
                     }
                   }}
@@ -222,10 +216,9 @@ function Example() {
                     (e.target.style.background = "transparent")
                   }
                 >
-                  {item.text} 
+                  {item.text}
                 </Link>
 
-                {/* ✨ Subtopics */}
                 <div
                   style={{
                     maxHeight: activeIndex === index ? "250px" : "0px",
@@ -268,14 +261,13 @@ function Example() {
                           e.target.style.transform = "translateX(0)";
                         }}
                       >
-                        ➤ {subItem.label}
+                        âž¤ {subItem.label}
                       </Link>
                     ))}
                   </div>
                 </div>
               </div>
             ))}
-
           </div>
         </Offcanvas.Body>
       </Offcanvas>

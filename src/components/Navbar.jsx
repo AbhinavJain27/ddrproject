@@ -27,8 +27,6 @@ function NavScrollExample() {
       variant="dark"
     >
       <Container fluid>
-        
-        {/* Brand */}
         <Navbar.Brand
           as={Link}
           to="/"
@@ -39,14 +37,13 @@ function NavScrollExample() {
             letterSpacing: "0.5px"
           }}
         >
-          ♻ Plastic Management
+          â™» Plastic Management
         </Navbar.Brand>
 
         <Navbar.Toggle aria-controls="navbarScroll" />
 
         <Navbar.Collapse id="navbarScroll">
           <Nav className="ms-auto my-2 my-lg-0" navbarScroll>
-
             {navItems.map((item, index) => (
               <Nav.Link
                 key={index}
@@ -71,7 +68,6 @@ function NavScrollExample() {
                 {item.label}
               </Nav.Link>
             ))}
-
           </Nav>
         </Navbar.Collapse>
       </Container>

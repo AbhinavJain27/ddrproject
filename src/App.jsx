@@ -20,11 +20,10 @@ import ScrollToHash from './components/ScrollToHash';
 function App() {
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-      
       <Navbar />
-      <ScrollToTop /> 
-      <ScrollToHash/>
-      <OffCanvas/>
+      <ScrollToTop />
+      <ScrollToHash />
+      <OffCanvas />
       <div style={{ flex: 1, paddingBottom: "60px" }}>
         <Routes>
           <Route path="/" element={<HomePage />} />
