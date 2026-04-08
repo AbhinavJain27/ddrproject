@@ -1,0 +1,33 @@
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+
+/* Smooth thin scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+/* Track (background) */
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Scroll thumb */
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ff4d4d, #ff1a1a);
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+/* Hover effect */
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #ff6666, #ff0000);
+}
+
+/* Firefox support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #ff4d4d transparent;
+}
