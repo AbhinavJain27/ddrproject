@@ -2,9 +2,11 @@ import Container from 'react-bootstrap/Container';
 import Nav from 'react-bootstrap/Nav';
 import Navbar from 'react-bootstrap/Navbar';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 function NavScrollExample() {
   const location = useLocation();
+  const { user, signOut } = useAuth();
 
   const navItems = [
     { path: "/page1", label: "Understanding Plastics" },
@@ -21,8 +23,8 @@ function NavScrollExample() {
       expand="lg"
       sticky="top"
       style={{
-        background: "linear-gradient(90deg, #6e0000 0%, #8b0000 45%, #a31212 100%)",
-        boxShadow: "0 10px 24px rgba(64, 0, 0, 0.22)",
+        background: "linear-gradient(90deg, #0f5132 0%, #146c43 45%, #1c8c57 100%)",
+        boxShadow: "0 10px 24px rgba(15, 81, 50, 0.22)",
         borderBottom: "1px solid rgba(255,255,255,0.14)",
         backdropFilter: "blur(10px)",
         paddingTop: "10px",
@@ -123,6 +125,22 @@ function NavScrollExample() {
                 {item.label}
               </Nav.Link>
             ))}
+            <button
+              type="button"
+              onClick={signOut}
+              style={{
+                border: "none",
+                borderRadius: "999px",
+                padding: "10px 16px",
+                background: "rgba(255,255,255,0.14)",
+                color: "#fff",
+                fontWeight: "700",
+                marginLeft: "8px",
+                cursor: "pointer",
+              }}
+            >
+              {user?.email ? `Sign out` : "Sign out"}
+            </button>
           </Nav>
         </Navbar.Collapse>
       </Container>

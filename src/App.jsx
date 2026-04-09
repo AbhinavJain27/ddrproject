@@ -15,12 +15,37 @@ import AchieversPage from './pages/AchieversPage';
 import CampaignsPage from './pages/CampaignsPage';
 import ReportPlasticPage from './pages/ReportPlasticPage';
 import StartCampaignPage from './pages/StartCampaignPage';
+import AuthPage from './pages/AuthPage';
 import Footer from './components/Footer';
 import OffCanvas from './components/OffCanvas'
 import ScrollToTop from './components/ScrollToTop';
 import ScrollToHash from './components/ScrollToHash';
+import { useAuth } from './context/AuthContext';
 
 function App() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          background: "linear-gradient(135deg, #eefaf1 0%, #ffffff 100%)",
+          color: "#146c43",
+          fontWeight: "700",
+        }}
+      >
+        Checking your account...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthPage />;
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <Navbar />
@@ -41,6 +66,7 @@ function App() {
           <Route path="/reports" element={<ReportPlasticPage />} />
           <Route path="/campaigns" element={<CampaignsPage />} />
           <Route path="/campaigns/start" element={<StartCampaignPage />} />
+          <Route path="*" element={<HomePage />} />
         </Routes>
       </div>
 

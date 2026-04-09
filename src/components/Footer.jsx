@@ -33,7 +33,7 @@ const Footer = () => {
         bottom: 0,
         left: 0,
         width: "100%",
-        background: "linear-gradient(135deg, #8B0000, #a52a2a)",
+        background: "linear-gradient(135deg, #0f5132, #1c8c57)",
         color: "#fff",
         textAlign: "center",
         padding: "12px 10px",
@@ -82,13 +82,13 @@ const Footer = () => {
             borderRadius: "20px",
             border: "none",
             background: "#fff",
-            color: "#8B0000",
+            color: "#146c43",
             fontWeight: "bold",
             cursor: "pointer",
             transition: "all 0.3s ease",
             boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
           }}
-          onMouseOver={(e) => (e.target.style.background = "#ffd6d6")}
+          onMouseOver={(e) => (e.target.style.background = "#d8f3df")}
           onMouseOut={(e) => (e.target.style.background = "#fff")}
         >
           Send 

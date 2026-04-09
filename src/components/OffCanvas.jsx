@@ -147,7 +147,7 @@ function Example() {
         }}
       >
         <Button
-          variant="danger"
+          variant="success"
           onClick={handleShow}
           style={{
             width: "55px",
@@ -159,6 +159,8 @@ function Example() {
             justifyContent: "center",
             boxShadow: "0 6px 18px rgba(0,0,0,0.4)",
             transition: "all 0.3s ease",
+            backgroundColor: "#146c43",
+            borderColor: "#146c43",
           }}
           onMouseEnter={(e) =>
             (e.target.style.transform = "scale(1.1) rotate(10deg)")

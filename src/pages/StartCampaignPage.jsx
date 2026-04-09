@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createCampaign, hasSupabaseConfig } from "../lib/supabase";
+import { useAuth } from "../context/AuthContext";
 
 function StartCampaignPage() {
   const navigate = useNavigate();
+  const { user, session } = useAuth();
   const [formState, setFormState] = useState({
     name: "",
     organizer: "",
@@ -34,6 +36,11 @@ function StartCampaignPage() {
       return;
     }
 
+    if (!user?.id || !session?.access_token) {
+      setStatus("Please sign in again before creating a campaign.");
+      return;
+    }
+
     setIsSubmitting(true);
     setStatus("");
 
@@ -48,11 +55,16 @@ function StartCampaignPage() {
         social_followers: Number(formState.socialFollowers) || 0,
         next_drive: formState.nextDrive,
         description: formState.description,
-      });
+        owner_user_id: user.id,
+        is_active: true,
+      }, session.access_token);
 
       navigate("/campaigns");
     } catch (error) {
-      setStatus(error.message || "Could not create the campaign. Please try again.");
+      setStatus(
+        error.message ||
+          "Could not create the campaign. Please check the Supabase campaign insert policy and try again."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -207,7 +219,7 @@ function StartCampaignPage() {
             style={{
               border: "none",
               borderRadius: "999px",
-              background: "#8b0000",
+              background: "#146c43",
               color: "#fff",
               padding: "12px 22px",
               fontWeight: "700",
@@ -222,10 +234,10 @@ function StartCampaignPage() {
             type="button"
             onClick={() => navigate("/campaigns")}
             style={{
-              border: "1px solid #d8b7aa",
+              border: "1px solid #cfe3d5",
               borderRadius: "999px",
-              background: "#fff7f4",
-              color: "#8b0000",
+              background: "#f4fbf6",
+              color: "#146c43",
               padding: "12px 22px",
               fontWeight: "700",
               cursor: "pointer",
@@ -235,7 +247,7 @@ function StartCampaignPage() {
           </button>
         </div>
         {status ? (
-          <p style={{ marginTop: "16px", color: "#8b0000", fontWeight: "600" }}>{status}</p>
+          <p style={{ marginTop: "16px", color: "#146c43", fontWeight: "600" }}>{status}</p>
         ) : null}
       </form>
     </div>

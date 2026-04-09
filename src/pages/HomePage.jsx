@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { fetchCampaigns, hasSupabaseConfig } from '../lib/supabase'
 
 const actions = [
   {
@@ -22,15 +23,91 @@ const actions = [
   },
 ]
 
-const leaderboard = [
-  { name: "Aarav", plasticCollected: "142 kg", campaigns: 12 },
-  { name: "Meera", plasticCollected: "127 kg", campaigns: 10 },
-  { name: "Rohan", plasticCollected: "113 kg", campaigns: 9 },
-  { name: "Nisha", plasticCollected: "96 kg", campaigns: 8 },
-  { name: "Dev", plasticCollected: "81 kg", campaigns: 7 },
+const fallbackLeaderboardCampaigns = [
+  {
+    id: "leaderboard-campaign-1",
+    name: "Delhi Riverfront Cleanup",
+    cities: ["New Delhi", "Noida", "Ghaziabad"],
+    plastic_collected: "1,420 kg",
+    joined_people: 186,
+  },
+  {
+    id: "leaderboard-campaign-2",
+    name: "Mumbai Beach Plastic Drive",
+    cities: ["Mumbai", "Navi Mumbai"],
+    plastic_collected: "2,110 kg",
+    joined_people: 254,
+  },
+  {
+    id: "leaderboard-campaign-3",
+    name: "Bengaluru Campus Reuse Week",
+    cities: ["Bengaluru"],
+    plastic_collected: "860 kg",
+    joined_people: 119,
+  },
 ]
 
+function parsePlasticCollected(value) {
+  if (typeof value === "number") {
+    return value
+  }
+
+  if (!value) {
+    return 0
+  }
+
+  const normalized = String(value).replace(/,/g, "")
+  const match = normalized.match(/[\d.]+/)
+  return match ? Number(match[0]) : 0
+}
+
 const HomePage = () => {
+  const [leaderboardCampaigns, setLeaderboardCampaigns] = useState([])
+  const [leaderboardStatus, setLeaderboardStatus] = useState("")
+
+  useEffect(() => {
+    let ignore = false
+
+    async function loadLeaderboard() {
+      if (!hasSupabaseConfig) {
+        if (!ignore) {
+          const sortedFallbackCampaigns = [...fallbackLeaderboardCampaigns].sort((left, right) => {
+            return parsePlasticCollected(right.plastic_collected) - parsePlasticCollected(left.plastic_collected)
+          })
+          setLeaderboardCampaigns(sortedFallbackCampaigns)
+          setLeaderboardStatus("Connect Supabase to show the full live campaign leaderboard.")
+        }
+        return
+      }
+
+      try {
+        const campaigns = await fetchCampaigns()
+        const sortedCampaigns = [...fallbackLeaderboardCampaigns, ...campaigns].sort((left, right) => {
+          return parsePlasticCollected(right.plastic_collected) - parsePlasticCollected(left.plastic_collected)
+        })
+
+        if (!ignore) {
+          setLeaderboardCampaigns(sortedCampaigns)
+          setLeaderboardStatus("")
+        }
+      } catch {
+        if (!ignore) {
+          const sortedFallbackCampaigns = [...fallbackLeaderboardCampaigns].sort((left, right) => {
+            return parsePlasticCollected(right.plastic_collected) - parsePlasticCollected(left.plastic_collected)
+          })
+          setLeaderboardCampaigns(sortedFallbackCampaigns)
+          setLeaderboardStatus("Could not load the live campaign leaderboard right now, so starter campaigns are being shown.")
+        }
+      }
+    }
+
+    loadLeaderboard()
+
+    return () => {
+      ignore = true
+    }
+  }, [])
+
   return (
     <div
       style={{
@@ -102,11 +179,11 @@ const HomePage = () => {
             <article
               style={{
                 height: "100%",
-                background: "linear-gradient(180deg, #fff8f4 0%, #fff 100%)",
-                border: "1px solid #f0ddd3",
+                background: "linear-gradient(180deg, #f2fbf5 0%, #fff 100%)",
+                border: "1px solid #d5eadb",
                 borderRadius: "20px",
                 padding: "22px",
-                boxShadow: "0 12px 24px rgba(139, 0, 0, 0.08)",
+                boxShadow: "0 12px 24px rgba(20, 108, 67, 0.08)",
                 transition: "transform 0.2s ease, box-shadow 0.2s ease",
               }}
             >
@@ -115,7 +192,7 @@ const HomePage = () => {
                   width: "42px",
                   height: "42px",
                   borderRadius: "50%",
-                  background: "#8b0000",
+                  background: "#146c43",
                   color: "#fff",
                   display: "flex",
                   alignItems: "center",
@@ -165,7 +242,7 @@ const HomePage = () => {
           <div>
             <h2 style={{ marginBottom: "6px", color: "#1f2d3d" }}>Campaign Leaderboard</h2>
             <p style={{ margin: 0, color: "#666" }}>
-              People with the highest total plastic collected across all campaigns appear on top.
+              Hardcoded starter campaigns and live Supabase campaigns are combined here, with the highest plastic collected shown first.
             </p>
           </div>
         </div>
@@ -179,25 +256,45 @@ const HomePage = () => {
             border: "1px solid #eee",
           }}
         >
-          {leaderboard.map((person, index) => (
-            <div
-              key={person.name}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "90px 1fr 160px 120px",
-                gap: "16px",
-                alignItems: "center",
-                padding: "18px 20px",
-                borderBottom: index === leaderboard.length - 1 ? "none" : "1px solid #f1f1f1",
-                background: index === 0 ? "#fff7e8" : "#fff",
-              }}
-            >
-              <strong style={{ color: "#8b0000", fontSize: "1.1rem" }}>#{index + 1}</strong>
-              <span style={{ color: "#2c3e50", fontWeight: "600" }}>{person.name}</span>
-              <span style={{ color: "#444" }}>{person.plasticCollected}</span>
-              <span style={{ color: "#666" }}>{person.campaigns} campaigns</span>
-            </div>
-          ))}
+          {leaderboardStatus ? (
+            <p style={{ margin: 0, padding: "18px 20px", color: "#666" }}>{leaderboardStatus}</p>
+          ) : leaderboardCampaigns.length > 0 ? (
+            leaderboardCampaigns.map((campaign, index) => (
+              <div
+                key={campaign.id}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "90px minmax(200px, 1.3fr) minmax(140px, 0.9fr) minmax(140px, 0.9fr)",
+                  gap: "16px",
+                  alignItems: "center",
+                  padding: "18px 20px",
+                  borderBottom:
+                    index === leaderboardCampaigns.length - 1 ? "none" : "1px solid #f1f1f1",
+                  background: index === 0 ? "#eefaf1" : "#fff",
+                }}
+              >
+                <strong style={{ color: "#146c43", fontSize: "1.1rem" }}>#{index + 1}</strong>
+                <div>
+                  <span style={{ color: "#2c3e50", fontWeight: "600", display: "block" }}>
+                    {campaign.name}
+                  </span>
+                  <span style={{ color: "#666", fontSize: "0.95rem" }}>
+                    {campaign.cities?.join(", ")}
+                  </span>
+                </div>
+                <span style={{ color: "#444" }}>
+                  {campaign.plastic_collected || campaign.plasticCollected}
+                </span>
+                <span style={{ color: "#666" }}>
+                  {campaign.joined_people ?? campaign.joinedPeople} joined
+                </span>
+              </div>
+            ))
+          ) : (
+            <p style={{ margin: 0, padding: "18px 20px", color: "#666" }}>
+              No campaigns are available in the leaderboard yet.
+            </p>
+          )}
         </div>
       </section>
     </div>

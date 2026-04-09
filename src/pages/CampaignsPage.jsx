@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { fetchCampaigns, hasSupabaseConfig } from "../lib/supabase";
+import {
+  fetchCampaigns,
+  fetchUserCampaignMemberships,
+  hasSupabaseConfig,
+  joinCampaign,
+} from "../lib/supabase";
+import { useAuth } from "../context/AuthContext";
 
 const fallbackCampaigns = [
   {
@@ -45,8 +51,11 @@ const fallbackCampaigns = [
 ];
 
 function CampaignsPage() {
+  const { user, session } = useAuth();
   const [campaigns, setCampaigns] = useState([]);
   const [status, setStatus] = useState("");
+  const [joinedCampaignIds, setJoinedCampaignIds] = useState([]);
+  const [joiningCampaignId, setJoiningCampaignId] = useState("");
 
   useEffect(() => {
     let ignore = false;
@@ -58,9 +67,16 @@ function CampaignsPage() {
       }
 
       try {
-        const rows = await fetchCampaigns();
+        const [campaignRows, membershipRows] = await Promise.all([
+          fetchCampaigns(),
+          user?.id && session?.access_token
+            ? fetchUserCampaignMemberships(user.id, session.access_token)
+            : Promise.resolve([]),
+        ]);
+
         if (!ignore) {
-          setCampaigns(rows);
+          setCampaigns(campaignRows);
+          setJoinedCampaignIds(membershipRows.map((membership) => String(membership.campaign_id)));
           setStatus("");
         }
       } catch {
@@ -75,9 +91,49 @@ function CampaignsPage() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [session?.access_token, user?.id]);
 
   const visibleCampaigns = [...fallbackCampaigns, ...campaigns];
+  const activeCampaignsForUser = visibleCampaigns.filter((campaign) => {
+    const campaignId = String(campaign.id);
+    const ownedByUser = campaign.owner_user_id === user?.id && campaign.is_active !== false;
+    const joinedByUser = joinedCampaignIds.includes(campaignId);
+    return ownedByUser || joinedByUser;
+  });
+
+  const handleJoinCampaign = async (campaign) => {
+    const campaignId = String(campaign.id);
+
+    if (!user?.id || !session?.access_token) {
+      setStatus("Please sign in again to join campaigns.");
+      return;
+    }
+
+    if (joinedCampaignIds.includes(campaignId)) {
+      setStatus("This campaign is already in your active campaigns.");
+      return;
+    }
+
+    setJoiningCampaignId(campaignId);
+    setStatus("");
+
+    try {
+      await joinCampaign(
+        {
+          user_id: user.id,
+          campaign_id: campaignId,
+        },
+        session.access_token
+      );
+
+      setJoinedCampaignIds((current) => [...current, campaignId]);
+      setStatus(`You joined ${campaign.name}. It will keep showing in your active campaigns when you sign in again.`);
+    } catch (error) {
+      setStatus(error.message || "Could not join this campaign right now.");
+    } finally {
+      setJoiningCampaignId("");
+    }
+  };
 
   return (
     <div style={{ maxWidth: "1140px", margin: "0 auto", padding: "40px 20px 120px" }}>
@@ -90,13 +146,62 @@ function CampaignsPage() {
         </p>
       </div>
 
+      <section
+        style={{
+          background: "#fff",
+          borderRadius: "24px",
+          padding: "24px",
+          border: "1px solid #e4efe7",
+          boxShadow: "0 16px 32px rgba(20, 108, 67, 0.08)",
+          marginBottom: "28px",
+        }}
+      >
+        <h2 style={{ color: "#1f2d3d", marginBottom: "10px" }}>Your Active Campaigns</h2>
+        <p style={{ color: "#666", lineHeight: "1.7", marginBottom: "16px" }}>
+          These are the campaigns currently linked to your account.
+        </p>
+
+        {activeCampaignsForUser.length > 0 ? (
+          <div style={{ display: "grid", gap: "12px" }}>
+            {activeCampaignsForUser.map((campaign) => (
+              <div
+                key={`active-${campaign.id}`}
+                style={{
+                  background: "#f4fbf6",
+                  borderRadius: "16px",
+                  padding: "16px",
+                  border: "1px solid #d7eadc",
+                }}
+              >
+                <strong style={{ display: "block", color: "#146c43", marginBottom: "6px" }}>
+                  {campaign.name}
+                </strong>
+                <span style={{ color: "#555" }}>
+                  {campaign.cities.join(", ")} | {campaign.plastic_collected || campaign.plasticCollected}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p style={{ margin: 0, color: "#666" }}>
+            You do not have any active campaigns yet. Start one below and it will appear here.
+          </p>
+        )}
+      </section>
+
       <div style={{ display: "grid", gap: "18px", marginBottom: "42px" }}>
         {status ? (
           <p style={{ margin: 0, color: "#8b0000", fontWeight: "600" }}>{status}</p>
         ) : null}
-        {visibleCampaigns.map((campaign) => (
+        {visibleCampaigns.map((campaign) => {
+          const campaignId = String(campaign.id);
+          const isJoined = joinedCampaignIds.includes(campaignId);
+          const isOwned = campaign.owner_user_id === user?.id && campaign.is_active !== false;
+          const buttonLabel = isOwned ? "Your Campaign" : isJoined ? "Joined" : "Join Campaign";
+
+          return (
           <article
-            key={campaign.id}
+            key={campaignId}
             style={{
               background: "#fff",
               borderRadius: "22px",
@@ -116,22 +221,25 @@ function CampaignsPage() {
               }}
             >
               <div>
-                <h2 style={{ color: "#8b0000", marginBottom: "8px" }}>{campaign.name}</h2>
+                <h2 style={{ color: "#146c43", marginBottom: "8px" }}>{campaign.name}</h2>
                 <p style={{ margin: 0, color: "#666" }}>Organized by {campaign.organizer}</p>
               </div>
               <button
                 type="button"
+                onClick={() => handleJoinCampaign(campaign)}
+                disabled={isJoined || isOwned || joiningCampaignId === campaignId}
                 style={{
                   border: "none",
                   borderRadius: "999px",
-                  background: "#8b0000",
+                  background: isJoined || isOwned ? "#9bcdae" : "#146c43",
                   color: "#fff",
                   padding: "10px 18px",
                   fontWeight: "700",
-                  cursor: "pointer",
+                  cursor: isJoined || isOwned || joiningCampaignId === campaignId ? "default" : "pointer",
+                  opacity: joiningCampaignId === campaignId ? 0.75 : 1,
                 }}
               >
-                Join Campaign
+                {joiningCampaignId === campaignId ? "Joining..." : buttonLabel}
               </button>
             </div>
 
@@ -144,38 +252,39 @@ function CampaignsPage() {
                 gap: "14px",
               }}
             >
-              <div style={{ background: "#fff7f4", borderRadius: "16px", padding: "14px" }}>
-                <strong style={{ display: "block", color: "#8b0000", marginBottom: "6px" }}>Cities</strong>
+              <div style={{ background: "#f4fbf6", borderRadius: "16px", padding: "14px" }}>
+                <strong style={{ display: "block", color: "#146c43", marginBottom: "6px" }}>Cities</strong>
                 <span style={{ color: "#4a4a4a" }}>{campaign.cities.join(", ")}</span>
               </div>
-              <div style={{ background: "#fff7f4", borderRadius: "16px", padding: "14px" }}>
-                <strong style={{ display: "block", color: "#8b0000", marginBottom: "6px" }}>Plastic Collected</strong>
+              <div style={{ background: "#f4fbf6", borderRadius: "16px", padding: "14px" }}>
+                <strong style={{ display: "block", color: "#146c43", marginBottom: "6px" }}>Plastic Collected</strong>
                 <span style={{ color: "#4a4a4a" }}>{campaign.plastic_collected || campaign.plasticCollected}</span>
               </div>
-              <div style={{ background: "#fff7f4", borderRadius: "16px", padding: "14px" }}>
-                <strong style={{ display: "block", color: "#8b0000", marginBottom: "6px" }}>People Joined</strong>
+              <div style={{ background: "#f4fbf6", borderRadius: "16px", padding: "14px" }}>
+                <strong style={{ display: "block", color: "#146c43", marginBottom: "6px" }}>People Joined</strong>
                 <span style={{ color: "#4a4a4a" }}>{campaign.joined_people ?? campaign.joinedPeople}</span>
               </div>
-              <div style={{ background: "#fff7f4", borderRadius: "16px", padding: "14px" }}>
-                <strong style={{ display: "block", color: "#8b0000", marginBottom: "6px" }}>Social Followers</strong>
+              <div style={{ background: "#f4fbf6", borderRadius: "16px", padding: "14px" }}>
+                <strong style={{ display: "block", color: "#146c43", marginBottom: "6px" }}>Social Followers</strong>
                 <span style={{ color: "#4a4a4a" }}>{campaign.social_followers ?? campaign.socialFollowers}</span>
               </div>
-              <div style={{ background: "#fff7f4", borderRadius: "16px", padding: "14px" }}>
-                <strong style={{ display: "block", color: "#8b0000", marginBottom: "6px" }}>Next Drive</strong>
+              <div style={{ background: "#f4fbf6", borderRadius: "16px", padding: "14px" }}>
+                <strong style={{ display: "block", color: "#146c43", marginBottom: "6px" }}>Next Drive</strong>
                 <span style={{ color: "#4a4a4a" }}>{campaign.next_drive || campaign.nextDrive}</span>
               </div>
             </div>
           </article>
-        ))}
+          );
+        })}
       </div>
 
       <section
         style={{
-          background: "linear-gradient(135deg, #fff6ef 0%, #fff 100%)",
+          background: "linear-gradient(135deg, #eefaf1 0%, #fff 100%)",
           borderRadius: "24px",
           padding: "28px",
-          border: "1px solid #f2ddd2",
-          boxShadow: "0 16px 32px rgba(139, 0, 0, 0.08)",
+          border: "1px solid #d9ecdf",
+          boxShadow: "0 16px 32px rgba(20, 108, 67, 0.08)",
           textAlign: "center",
         }}
       >
@@ -189,7 +298,7 @@ function CampaignsPage() {
           style={{
             display: "inline-block",
             textDecoration: "none",
-            background: "#8b0000",
+            background: "#146c43",
             color: "#fff",
             padding: "12px 24px",
             borderRadius: "999px",

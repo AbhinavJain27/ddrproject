@@ -176,7 +176,7 @@ function AchieversPage() {
 
       <Section id="achievers-hero" title="People Taking Action">
         <img
-          src="/hardikimages/image 11.png"
+          src="/beforeafter.jpeg"
           alt="Plastic pollution awareness visual"
           style={{
             display: "block",
@@ -213,11 +213,11 @@ function AchieversPage() {
               style={{
                 minWidth: "280px",
                 maxWidth: "280px",
-                background: "#fff7f4",
-                border: "1px solid #f0d7ce",
+                background: "#f4fbf6",
+                border: "1px solid #d4eadb",
                 borderRadius: "16px",
                 padding: "18px",
-                boxShadow: "0 8px 20px rgba(139, 0, 0, 0.08)",
+                boxShadow: "0 8px 20px rgba(20, 108, 67, 0.08)",
                 scrollSnapAlign: "start",
                 flexShrink: 0,
               }}
@@ -253,7 +253,7 @@ function AchieversPage() {
               <p style={{ marginBottom: "16px", color: "#4b3a34" }}>
                 &ldquo;{item.quote || item.testimony}&rdquo;
               </p>
-              <strong style={{ display: "block", color: "#8b0000" }}>{item.name}</strong>
+              <strong style={{ display: "block", color: "#146c43" }}>{item.name}</strong>
               <span style={{ color: "#6e625d", fontSize: "14px" }}>{item.role}</span>
             </article>
           ))}
@@ -365,7 +365,7 @@ function AchieversPage() {
               style={{
                 border: "none",
                 borderRadius: "999px",
-                background: "#8b0000",
+                background: "#146c43",
                 color: "#fff",
                 padding: "12px 22px",
                 fontWeight: "700",
@@ -379,7 +379,7 @@ function AchieversPage() {
           </form>
 
           {status ? (
-            <p style={{ marginTop: "16px", color: "#8b0000", fontWeight: "600" }}>{status}</p>
+            <p style={{ marginTop: "16px", color: "#146c43", fontWeight: "600" }}>{status}</p>
           ) : null}
         </div>
       </Section>

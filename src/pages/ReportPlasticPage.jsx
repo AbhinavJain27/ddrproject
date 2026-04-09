@@ -127,7 +127,7 @@ function ReportPlasticPage() {
       </div>
 
       {status ? (
-        <p style={{ marginBottom: "18px", color: "#8b0000", fontWeight: "600" }}>{status}</p>
+        <p style={{ marginBottom: "18px", color: "#146c43", fontWeight: "600" }}>{status}</p>
       ) : null}
 
       <section style={{ marginBottom: "40px" }}>
@@ -168,7 +168,7 @@ function ReportPlasticPage() {
                 }}
               />
               <div style={{ padding: "18px" }}>
-                <h3 style={{ color: "#8b0000", marginBottom: "8px" }}>{report.area}</h3>
+                <h3 style={{ color: "#146c43", marginBottom: "8px" }}>{report.area}</h3>
                 <p style={{ color: "#555", lineHeight: "1.6", marginBottom: "12px" }}>{report.address}</p>
                 <p style={{ margin: 0, color: "#666", fontWeight: "600" }}>
                   Posted by {report.reporter_name}
@@ -265,7 +265,7 @@ function ReportPlasticPage() {
             style={{
               border: "none",
               borderRadius: "999px",
-              background: "#8b0000",
+              background: "#146c43",
               color: "#fff",
               padding: "12px 22px",
               fontWeight: "700",

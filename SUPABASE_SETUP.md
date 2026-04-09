@@ -2,6 +2,12 @@
 
 Create a `.env` file in the project root using `.env.example` as the template.
 
+In Supabase Authentication:
+
+1. Go to `Authentication` -> `Providers` -> `Email`
+2. Enable email auth
+3. Turn off email confirmation so users can enter the app immediately after signing up
+
 Use this SQL in the Supabase SQL editor:
 
 ```sql
@@ -75,6 +81,8 @@ create table if not exists public.campaigns (
   social_followers integer not null default 0,
   next_drive text not null,
   description text not null,
+  owner_user_id uuid references auth.users(id),
+  is_active boolean not null default true,
   created_at timestamptz not null default now()
 );
 
@@ -82,6 +90,8 @@ alter table public.campaigns enable row level security;
 
 drop policy if exists "Allow public read access to campaigns" on public.campaigns;
 drop policy if exists "Allow public insert access to campaigns" on public.campaigns;
+drop policy if exists "Allow authenticated insert access to campaigns" on public.campaigns;
+drop policy if exists "Allow authenticated users to read campaigns" on public.campaigns;
 
 create policy "Allow public read access to campaigns"
 on public.campaigns
@@ -89,11 +99,72 @@ for select
 to anon
 using (true);
 
-create policy "Allow public insert access to campaigns"
+create policy "Allow authenticated users to read campaigns"
+on public.campaigns
+for select
+to authenticated
+using (true);
+
+create policy "Allow authenticated insert access to campaigns"
 on public.campaigns
 for insert
-to anon
-with check (true);
+to authenticated
+with check (auth.uid() = owner_user_id);
+```
+
+If you already created the campaigns table earlier, run this once too:
+
+```sql
+alter table public.campaigns
+add column if not exists owner_user_id uuid references auth.users(id);
+
+alter table public.campaigns
+add column if not exists is_active boolean not null default true;
+
+drop policy if exists "Allow public insert access to campaigns" on public.campaigns;
+drop policy if exists "Allow authenticated insert access to campaigns" on public.campaigns;
+drop policy if exists "Allow authenticated users to read campaigns" on public.campaigns;
+
+create policy "Allow authenticated users to read campaigns"
+on public.campaigns
+for select
+to authenticated
+using (true);
+
+create policy "Allow authenticated insert access to campaigns"
+on public.campaigns
+for insert
+to authenticated
+with check (auth.uid() = owner_user_id);
+```
+
+Create the joined-campaigns table with this SQL so "Join Campaign" can stay linked to the user even after logout/login:
+
+```sql
+create table if not exists public.campaign_memberships (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  campaign_id text not null,
+  created_at timestamptz not null default now(),
+  unique (user_id, campaign_id)
+);
+
+alter table public.campaign_memberships enable row level security;
+
+drop policy if exists "Allow users to read their campaign memberships" on public.campaign_memberships;
+drop policy if exists "Allow users to create their campaign memberships" on public.campaign_memberships;
+
+create policy "Allow users to read their campaign memberships"
+on public.campaign_memberships
+for select
+to authenticated
+using (auth.uid() = user_id);
+
+create policy "Allow users to create their campaign memberships"
+on public.campaign_memberships
+for insert
+to authenticated
+with check (auth.uid() = user_id);
 ```
 
 Create a public storage bucket named `plastic-report-photos`.
