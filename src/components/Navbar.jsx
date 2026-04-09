@@ -21,8 +21,12 @@ function NavScrollExample() {
       expand="lg"
       sticky="top"
       style={{
-        backgroundColor: "#8B0000",
-        boxShadow: "0 4px 10px rgba(0,0,0,0.3)"
+        background: "linear-gradient(90deg, #6e0000 0%, #8b0000 45%, #a31212 100%)",
+        boxShadow: "0 10px 24px rgba(64, 0, 0, 0.22)",
+        borderBottom: "1px solid rgba(255,255,255,0.14)",
+        backdropFilter: "blur(10px)",
+        paddingTop: "10px",
+        paddingBottom: "10px",
       }}
       variant="dark"
     >
@@ -32,37 +36,88 @@ function NavScrollExample() {
           to="/"
           style={{
             color: "#fff",
-            fontWeight: "bold",
-            fontSize: "20px",
-            letterSpacing: "0.5px"
+            fontWeight: "800",
+            fontSize: "1.15rem",
+            letterSpacing: "0.4px",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            textDecoration: "none",
           }}
         >
-          â™» Plastic Management
+          <span
+            style={{
+              width: "38px",
+              height: "38px",
+              borderRadius: "12px",
+              background: "rgba(255,255,255,0.14)",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "1rem",
+              boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)",
+            }}
+          >
+            PM
+          </span>
+          <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.1 }}>
+            <span>Plastic Management</span>
+            <span style={{ fontSize: "0.72rem", fontWeight: "500", opacity: 0.78 }}>
+              Learn, act, and build cleaner cities
+            </span>
+          </span>
         </Navbar.Brand>
 
-        <Navbar.Toggle aria-controls="navbarScroll" />
+        <Navbar.Toggle
+          aria-controls="navbarScroll"
+          style={{
+            border: "1px solid rgba(255,255,255,0.22)",
+            padding: "6px 10px",
+            boxShadow: "none",
+          }}
+        />
 
         <Navbar.Collapse id="navbarScroll">
-          <Nav className="ms-auto my-2 my-lg-0" navbarScroll>
+          <Nav
+            className="ms-auto my-2 my-lg-0"
+            navbarScroll
+            style={{
+              gap: "6px",
+              alignItems: "center",
+            }}
+          >
             {navItems.map((item, index) => (
               <Nav.Link
                 key={index}
                 as={Link}
                 to={item.path}
                 style={{
-                  color: location.pathname === item.path ? "#ffd700" : "#fff",
-                  fontWeight: location.pathname === item.path ? "600" : "400",
-                  padding: "8px 12px",
-                  borderRadius: "6px",
-                  transition: "0.3s"
+                  color: "#fff",
+                  fontWeight: location.pathname === item.path ? "700" : "500",
+                  padding: "10px 14px",
+                  borderRadius: "999px",
+                  transition: "all 0.25s ease",
+                  background:
+                    location.pathname === item.path
+                      ? "rgba(255, 255, 255, 0.16)"
+                      : "transparent",
+                  boxShadow:
+                    location.pathname === item.path
+                      ? "inset 0 0 0 1px rgba(255,255,255,0.12)"
+                      : "none",
+                  fontSize: "0.95rem",
                 }}
                 onMouseEnter={(e) => {
                   if (location.pathname !== item.path) {
-                    e.target.style.background = "rgba(255,255,255,0.2)";
+                    e.target.style.background = "rgba(255,255,255,0.12)";
+                    e.target.style.transform = "translateY(-1px)";
                   }
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.background = "transparent";
+                  if (location.pathname !== item.path) {
+                    e.target.style.background = "transparent";
+                  }
+                  e.target.style.transform = "translateY(0)";
                 }}
               >
                 {item.label}

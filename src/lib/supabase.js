@@ -1,7 +1,10 @@
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const achieversTable = import.meta.env.VITE_SUPABASE_ACHIEVERS_TABLE || "achievers";
+const campaignsTable = import.meta.env.VITE_SUPABASE_CAMPAIGNS_TABLE || "campaigns";
 const achieverBucket = import.meta.env.VITE_SUPABASE_ACHIEVER_BUCKET || "achiever-photos";
+const reportsTable = import.meta.env.VITE_SUPABASE_REPORTS_TABLE || "plastic_reports";
+const reportBucket = import.meta.env.VITE_SUPABASE_REPORT_BUCKET || "plastic-report-photos";
 
 const hasSupabaseConfig = Boolean(supabaseUrl && supabaseAnonKey);
 
@@ -41,7 +44,7 @@ export async function fetchAchievers() {
   }
 
   const query = new URLSearchParams({
-    select: "id,name,role,testimony,image_url,created_at",
+    select: "id,name,role,testimony,image_url,video_url,created_at",
     order: "created_at.desc",
   });
 
@@ -54,7 +57,7 @@ export async function fetchAchievers() {
   return parseResponse(response, "Could not load achievers.");
 }
 
-export async function uploadAchieverPhoto(file) {
+async function uploadAchieverAsset(file) {
   if (!hasSupabaseConfig) {
     throw new Error("Supabase is not configured.");
   }
@@ -79,6 +82,39 @@ export async function uploadAchieverPhoto(file) {
   return `${supabaseUrl}/storage/v1/object/public/${achieverBucket}/${fileName}`;
 }
 
+export async function uploadAchieverPhoto(file) {
+  return uploadAchieverAsset(file);
+}
+
+export async function uploadAchieverVideo(file) {
+  return uploadAchieverAsset(file);
+}
+
+export async function uploadReportPhoto(file) {
+  if (!hasSupabaseConfig) {
+    throw new Error("Supabase is not configured.");
+  }
+
+  if (!file) {
+    return "";
+  }
+
+  const extension = file.name.split(".").pop() || "jpg";
+  const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+  const response = await fetch(`${supabaseUrl}/storage/v1/object/${reportBucket}/${fileName}`, {
+    method: "POST",
+    headers: getHeaders({
+      "Content-Type": file.type || "application/octet-stream",
+      "x-upsert": "false",
+    }),
+    body: file,
+  });
+
+  await parseResponse(response, "Could not upload the report photo.");
+
+  return `${supabaseUrl}/storage/v1/object/public/${reportBucket}/${fileName}`;
+}
+
 export async function createAchieverEntry(entry) {
   if (!hasSupabaseConfig) {
     throw new Error("Supabase is not configured.");
@@ -97,4 +133,86 @@ export async function createAchieverEntry(entry) {
   return Array.isArray(rows) ? rows[0] : rows;
 }
 
-export { achieverBucket, achieversTable, hasSupabaseConfig };
+export async function fetchCampaigns() {
+  if (!hasSupabaseConfig) {
+    throw new Error("Supabase is not configured.");
+  }
+
+  const query = new URLSearchParams({
+    select:
+      "id,name,organizer,contact_email,cities,plastic_collected,joined_people,social_followers,next_drive,description,created_at",
+    order: "created_at.desc",
+  });
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/${campaignsTable}?${query.toString()}`, {
+    headers: getHeaders({
+      Accept: "application/json",
+    }),
+  });
+
+  return parseResponse(response, "Could not load campaigns.");
+}
+
+export async function createCampaign(entry) {
+  if (!hasSupabaseConfig) {
+    throw new Error("Supabase is not configured.");
+  }
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/${campaignsTable}`, {
+    method: "POST",
+    headers: getHeaders({
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    }),
+    body: JSON.stringify(entry),
+  });
+
+  const rows = await parseResponse(response, "Could not create the campaign.");
+  return Array.isArray(rows) ? rows[0] : rows;
+}
+
+export async function fetchPlasticReports() {
+  if (!hasSupabaseConfig) {
+    throw new Error("Supabase is not configured.");
+  }
+
+  const query = new URLSearchParams({
+    select: "id,reporter_name,area,address,image_url,created_at",
+    order: "created_at.desc",
+  });
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/${reportsTable}?${query.toString()}`, {
+    headers: getHeaders({
+      Accept: "application/json",
+    }),
+  });
+
+  return parseResponse(response, "Could not load plastic reports.");
+}
+
+export async function createPlasticReport(entry) {
+  if (!hasSupabaseConfig) {
+    throw new Error("Supabase is not configured.");
+  }
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/${reportsTable}`, {
+    method: "POST",
+    headers: getHeaders({
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    }),
+    body: JSON.stringify(entry),
+  });
+
+  const rows = await parseResponse(response, "Could not create the plastic report.");
+  return Array.isArray(rows) ? rows[0] : rows;
+}
+
+export {
+  achieverBucket,
+  achieversTable,
+  campaignsTable,
+  reportBucket,
+  reportsTable,
+  hasSupabaseConfig,
+};

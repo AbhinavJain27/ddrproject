@@ -12,6 +12,9 @@ import PageFive from './pages/PageFive';
 import PageSix from './pages/PageSix';
 import PageSeven from './pages/PageSeven';
 import AchieversPage from './pages/AchieversPage';
+import CampaignsPage from './pages/CampaignsPage';
+import ReportPlasticPage from './pages/ReportPlasticPage';
+import StartCampaignPage from './pages/StartCampaignPage';
 import Footer from './components/Footer';
 import OffCanvas from './components/OffCanvas'
 import ScrollToTop from './components/ScrollToTop';
@@ -35,6 +38,9 @@ function App() {
           <Route path="/page6" element={<PageSix />} />
           <Route path="/page7" element={<PageSeven />} />
           <Route path="/achievers" element={<AchieversPage />} />
+          <Route path="/reports" element={<ReportPlasticPage />} />
+          <Route path="/campaigns" element={<CampaignsPage />} />
+          <Route path="/campaigns/start" element={<StartCampaignPage />} />
         </Routes>
       </div>
 

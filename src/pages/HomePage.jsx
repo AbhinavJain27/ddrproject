@@ -12,11 +12,13 @@ const actions = [
     title: "Report Plastic Accumulation",
     description:
       "Highlight areas where plastic waste is piling up so action can be planned faster.",
+    to: "/reports",
   },
   {
     title: "Start/Join A Plastic Campaign",
     description:
       "Bring people together for collection drives, awareness work, and long-term change.",
+    to: "/campaigns",
   },
 ]
 

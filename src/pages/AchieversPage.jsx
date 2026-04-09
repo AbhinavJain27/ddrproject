@@ -4,6 +4,7 @@ import {
   fetchAchievers,
   hasSupabaseConfig,
   uploadAchieverPhoto,
+  uploadAchieverVideo,
 } from "../lib/supabase";
 
 const Section = ({ id, title, children }) => (
@@ -51,6 +52,7 @@ function AchieversPage() {
     role: "",
     testimony: "",
     photo: null,
+    video: null,
   });
   const [status, setStatus] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,6 +77,7 @@ function AchieversPage() {
               ...row,
               quote: row.testimony,
               image: row.image_url || "/home.png",
+              video: row.video_url || "",
             }))
           );
           setStatus("");
@@ -118,11 +121,13 @@ function AchieversPage() {
 
     try {
       const imageUrl = await uploadAchieverPhoto(formState.photo);
+      const videoUrl = await uploadAchieverVideo(formState.video);
       const createdRow = await createAchieverEntry({
         name: formState.name,
         role: formState.role || "Community contributor",
         testimony: formState.testimony,
         image_url: imageUrl,
+        video_url: videoUrl,
       });
 
       setSubmittedTestimonies((current) => [
@@ -130,6 +135,7 @@ function AchieversPage() {
           ...createdRow,
           quote: createdRow.testimony,
           image: createdRow.image_url || "/home.png",
+          video: createdRow.video_url || "",
         },
         ...current,
       ]);
@@ -139,6 +145,7 @@ function AchieversPage() {
         role: "",
         testimony: "",
         photo: null,
+        video: null,
       });
       event.target.reset();
     } catch (error) {
@@ -227,6 +234,22 @@ function AchieversPage() {
                   marginBottom: "16px",
                 }}
               />
+              {item.video || item.video_url ? (
+                <video
+                  controls
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    maxHeight: "220px",
+                    borderRadius: "12px",
+                    marginBottom: "16px",
+                    background: "#000",
+                  }}
+                >
+                  <source src={item.video || item.video_url} />
+                  Your browser does not support embedded videos.
+                </video>
+              ) : null}
               <p style={{ marginBottom: "16px", color: "#4b3a34" }}>
                 &ldquo;{item.quote || item.testimony}&rdquo;
               </p>
@@ -293,6 +316,22 @@ function AchieversPage() {
                 type="file"
                 name="photo"
                 accept="image/*"
+                onChange={handleChange}
+                style={{
+                  padding: "10px",
+                  borderRadius: "12px",
+                  border: "1px solid #ccc",
+                  background: "#fffaf8",
+                }}
+              />
+            </label>
+
+            <label style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
+              <span>Upload your video</span>
+              <input
+                type="file"
+                name="video"
+                accept="video/*"
                 onChange={handleChange}
                 style={{
                   padding: "10px",
