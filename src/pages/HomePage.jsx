@@ -4,9 +4,9 @@ import { fetchCampaigns, hasSupabaseConfig } from '../lib/supabase'
 
 const actions = [
   {
-    title: "Share your views",
+    title: "Track Your Impact",
     description:
-      "Tell us what plastic awareness, cleanup drives, and better habits mean to you.",
+      "Tell us how much plastic you collected and help us measure real impact.",
     to: "/achievers",
   },
   {
@@ -20,30 +20,6 @@ const actions = [
     description:
       "Bring people together for collection drives, awareness work, and long-term change.",
     to: "/campaigns",
-  },
-]
-
-const fallbackLeaderboardCampaigns = [
-  {
-    id: "leaderboard-campaign-1",
-    name: "Delhi Riverfront Cleanup",
-    cities: ["New Delhi", "Noida", "Ghaziabad"],
-    plastic_collected: "1,420 kg",
-    joined_people: 186,
-  },
-  {
-    id: "leaderboard-campaign-2",
-    name: "Mumbai Beach Plastic Drive",
-    cities: ["Mumbai", "Navi Mumbai"],
-    plastic_collected: "2,110 kg",
-    joined_people: 254,
-  },
-  {
-    id: "leaderboard-campaign-3",
-    name: "Bengaluru Campus Reuse Week",
-    cities: ["Bengaluru"],
-    plastic_collected: "860 kg",
-    joined_people: 119,
   },
 ]
 
@@ -71,18 +47,15 @@ const HomePage = () => {
     async function loadLeaderboard() {
       if (!hasSupabaseConfig) {
         if (!ignore) {
-          const sortedFallbackCampaigns = [...fallbackLeaderboardCampaigns].sort((left, right) => {
-            return parsePlasticCollected(right.plastic_collected) - parsePlasticCollected(left.plastic_collected)
-          })
-          setLeaderboardCampaigns(sortedFallbackCampaigns)
-          setLeaderboardStatus("Connect Supabase to show the full live campaign leaderboard.")
+          setLeaderboardCampaigns([])
+          setLeaderboardStatus("Connect Supabase to show the live campaign leaderboard.")
         }
         return
       }
 
       try {
         const campaigns = await fetchCampaigns()
-        const sortedCampaigns = [...fallbackLeaderboardCampaigns, ...campaigns].sort((left, right) => {
+        const sortedCampaigns = [...campaigns].sort((left, right) => {
           return parsePlasticCollected(right.plastic_collected) - parsePlasticCollected(left.plastic_collected)
         })
 
@@ -92,11 +65,8 @@ const HomePage = () => {
         }
       } catch {
         if (!ignore) {
-          const sortedFallbackCampaigns = [...fallbackLeaderboardCampaigns].sort((left, right) => {
-            return parsePlasticCollected(right.plastic_collected) - parsePlasticCollected(left.plastic_collected)
-          })
-          setLeaderboardCampaigns(sortedFallbackCampaigns)
-          setLeaderboardStatus("Could not load the live campaign leaderboard right now, so starter campaigns are being shown.")
+          setLeaderboardCampaigns([])
+          setLeaderboardStatus("Could not load the live campaign leaderboard right now.")
         }
       }
     }
@@ -124,12 +94,17 @@ const HomePage = () => {
       >
         <h1
           style={{
-            marginBottom: "12px",
-            color: "#1f2d3d",
-            fontSize: "clamp(2rem, 4vw, 3.4rem)",
+            marginBottom: "14px",
+            color: "#316a50",
+            fontSize: "clamp(2.4rem, 5vw, 4.5rem)",
+            fontFamily: '"Georgia", "Times New Roman", serif',
+            fontWeight: "2000",
+            letterSpacing: "0.03em",
+            lineHeight: "1.05",
+            textShadow: "0 10px 24px rgba(20, 108, 67, 0.12)",
           }}
         >
-          Plastic Action Hub
+          Plastic Waste Management
         </h1>
         <p
           style={{
@@ -241,9 +216,6 @@ const HomePage = () => {
         >
           <div>
             <h2 style={{ marginBottom: "6px", color: "#1f2d3d" }}>Campaign Leaderboard</h2>
-            <p style={{ margin: 0, color: "#666" }}>
-              Hardcoded starter campaigns and live Supabase campaigns are combined here, with the highest plastic collected shown first.
-            </p>
           </div>
         </div>
 

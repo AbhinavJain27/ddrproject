@@ -5,57 +5,19 @@ import {
   fetchUserCampaignMemberships,
   hasSupabaseConfig,
   joinCampaign,
+  leaveCampaign,
+  syncUserActiveCampaignCount,
 } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 
-const fallbackCampaigns = [
-  {
-    id: "campaign-1",
-    name: "Delhi Riverfront Cleanup",
-    organizer: "Green Delhi Circle",
-    contact_email: "",
-    cities: ["New Delhi", "Noida", "Ghaziabad"],
-    plastic_collected: "1,420 kg",
-    joined_people: 186,
-    social_followers: 3400,
-    next_drive: "Sunday, 14 April",
-    description:
-      "A recurring cleanup and awareness campaign focused on riverbanks, neighborhood drains, and public parks across NCR.",
-  },
-  {
-    id: "campaign-2",
-    name: "Mumbai Beach Plastic Drive",
-    organizer: "Coastline Collective",
-    contact_email: "",
-    cities: ["Mumbai", "Navi Mumbai"],
-    plastic_collected: "2,110 kg",
-    joined_people: 254,
-    social_followers: 5100,
-    next_drive: "Saturday, 20 April",
-    description:
-      "Weekend drives focused on beach litter removal, segregation awareness, and sorting collected plastic for recycling partners.",
-  },
-  {
-    id: "campaign-3",
-    name: "Bengaluru Campus Reuse Week",
-    organizer: "Circular Campus Network",
-    contact_email: "",
-    cities: ["Bengaluru"],
-    plastic_collected: "860 kg",
-    joined_people: 119,
-    social_followers: 2200,
-    next_drive: "Friday, 19 April",
-    description:
-      "A city-campus collaboration that mixes cleanup events, reusable alternatives, and volunteer-led awareness workshops.",
-  },
-];
-
 function CampaignsPage() {
   const { user, session } = useAuth();
+  const isAuthenticated = Boolean(user?.id && session?.access_token);
   const [campaigns, setCampaigns] = useState([]);
   const [status, setStatus] = useState("");
   const [joinedCampaignIds, setJoinedCampaignIds] = useState([]);
   const [joiningCampaignId, setJoiningCampaignId] = useState("");
+  const [removingCampaignId, setRemovingCampaignId] = useState("");
 
   useEffect(() => {
     let ignore = false;
@@ -93,8 +55,8 @@ function CampaignsPage() {
     };
   }, [session?.access_token, user?.id]);
 
-  const visibleCampaigns = [...fallbackCampaigns, ...campaigns];
-  const activeCampaignsForUser = visibleCampaigns.filter((campaign) => {
+  const visibleCampaigns = campaigns;
+  const activeCampaignsForUser = campaigns.filter((campaign) => {
     const campaignId = String(campaign.id);
     const ownedByUser = campaign.owner_user_id === user?.id && campaign.is_active !== false;
     const joinedByUser = joinedCampaignIds.includes(campaignId);
@@ -126,12 +88,48 @@ function CampaignsPage() {
         session.access_token
       );
 
+      await syncUserActiveCampaignCount(user.id, session.access_token, {
+        email: user.email || null,
+        full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+      });
+
       setJoinedCampaignIds((current) => [...current, campaignId]);
-      setStatus(`You joined ${campaign.name}. It will keep showing in your active campaigns when you sign in again.`);
     } catch (error) {
       setStatus(error.message || "Could not join this campaign right now.");
     } finally {
       setJoiningCampaignId("");
+    }
+  };
+
+  const handleRemoveCampaign = async (campaign) => {
+    const campaignId = String(campaign.id);
+
+    if (!user?.id || !session?.access_token) {
+      setStatus("Please sign in again to manage your campaigns.");
+      return;
+    }
+
+    if (!joinedCampaignIds.includes(campaignId)) {
+      setStatus("This campaign is not currently linked to your account.");
+      return;
+    }
+
+    setRemovingCampaignId(campaignId);
+    setStatus("");
+
+    try {
+      await leaveCampaign(user.id, campaignId, session.access_token);
+
+      await syncUserActiveCampaignCount(user.id, session.access_token, {
+        email: user.email || null,
+        full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+      });
+
+      setJoinedCampaignIds((current) => current.filter((id) => id !== campaignId));
+    } catch (error) {
+      setStatus(error.message || "Could not remove this campaign right now.");
+    } finally {
+      setRemovingCampaignId("");
     }
   };
 
@@ -158,10 +156,12 @@ function CampaignsPage() {
       >
         <h2 style={{ color: "#1f2d3d", marginBottom: "10px" }}>Your Active Campaigns</h2>
         <p style={{ color: "#666", lineHeight: "1.7", marginBottom: "16px" }}>
-          These are the campaigns currently linked to your account.
+          {isAuthenticated
+            ? "These are the campaigns currently linked to your account."
+            : "Sign in to view the campaigns linked to your account."}
         </p>
 
-        {activeCampaignsForUser.length > 0 ? (
+        {isAuthenticated && activeCampaignsForUser.length > 0 ? (
           <div style={{ display: "grid", gap: "12px" }}>
             {activeCampaignsForUser.map((campaign) => (
               <div
@@ -173,18 +173,53 @@ function CampaignsPage() {
                   border: "1px solid #d7eadc",
                 }}
               >
-                <strong style={{ display: "block", color: "#146c43", marginBottom: "6px" }}>
-                  {campaign.name}
-                </strong>
-                <span style={{ color: "#555" }}>
-                  {campaign.cities.join(", ")} | {campaign.plastic_collected || campaign.plasticCollected}
-                </span>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: "12px",
+                    alignItems: "flex-start",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div>
+                    <strong style={{ display: "block", color: "#146c43", marginBottom: "6px" }}>
+                      {campaign.name}
+                    </strong>
+                    <span style={{ color: "#555" }}>
+                      {campaign.cities.join(", ")} | {campaign.plastic_collected || campaign.plasticCollected}
+                    </span>
+                  </div>
+                  {campaign.owner_user_id === user?.id ? (
+                    <span style={{ color: "#146c43", fontWeight: "700" }}>Owner</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCampaign(campaign)}
+                      disabled={removingCampaignId === String(campaign.id)}
+                      style={{
+                        border: "1px solid #cfe3d5",
+                        borderRadius: "999px",
+                        background: "#fff",
+                        color: "#146c43",
+                        padding: "8px 16px",
+                        fontWeight: "700",
+                        cursor: removingCampaignId === String(campaign.id) ? "default" : "pointer",
+                        opacity: removingCampaignId === String(campaign.id) ? 0.75 : 1,
+                      }}
+                    >
+                      {removingCampaignId === String(campaign.id) ? "Removing..." : "Remove"}
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         ) : (
           <p style={{ margin: 0, color: "#666" }}>
-            You do not have any active campaigns yet. Start one below and it will appear here.
+            {isAuthenticated
+              ? "You do not have any active campaigns yet. Start one below and it will appear here."
+              : "No campaign list is shown here until you sign in."}
           </p>
         )}
       </section>
@@ -193,11 +228,16 @@ function CampaignsPage() {
         {status ? (
           <p style={{ margin: 0, color: "#8b0000", fontWeight: "600" }}>{status}</p>
         ) : null}
-        {visibleCampaigns.map((campaign) => {
+        {visibleCampaigns.length > 0 ? visibleCampaigns.map((campaign) => {
           const campaignId = String(campaign.id);
           const isJoined = joinedCampaignIds.includes(campaignId);
           const isOwned = campaign.owner_user_id === user?.id && campaign.is_active !== false;
-          const buttonLabel = isOwned ? "Your Campaign" : isJoined ? "Joined" : "Join Campaign";
+          const isRemoving = removingCampaignId === campaignId;
+          const buttonLabel = isOwned
+            ? "Your Campaign"
+            : isJoined
+              ? "Joined"
+              : "Join Campaign";
 
           return (
           <article
@@ -227,7 +267,7 @@ function CampaignsPage() {
               <button
                 type="button"
                 onClick={() => handleJoinCampaign(campaign)}
-                disabled={isJoined || isOwned || joiningCampaignId === campaignId}
+                disabled={isJoined || isOwned || isRemoving || joiningCampaignId === campaignId}
                 style={{
                   border: "none",
                   borderRadius: "999px",
@@ -241,6 +281,25 @@ function CampaignsPage() {
               >
                 {joiningCampaignId === campaignId ? "Joining..." : buttonLabel}
               </button>
+              {isJoined && !isOwned ? (
+                <button
+                  type="button"
+                  onClick={() => handleRemoveCampaign(campaign)}
+                  disabled={isRemoving || joiningCampaignId === campaignId}
+                  style={{
+                    border: "1px solid #cfe3d5",
+                    borderRadius: "999px",
+                    background: "#fff",
+                    color: "#146c43",
+                    padding: "10px 18px",
+                    fontWeight: "700",
+                    cursor: isRemoving || joiningCampaignId === campaignId ? "default" : "pointer",
+                    opacity: isRemoving ? 0.75 : 1,
+                  }}
+                >
+                  {isRemoving ? "Removing..." : "Remove"}
+                </button>
+              ) : null}
             </div>
 
             <p style={{ color: "#555", lineHeight: "1.7", marginBottom: "18px" }}>{campaign.description}</p>
@@ -275,7 +334,22 @@ function CampaignsPage() {
             </div>
           </article>
           );
-        })}
+        }) : (
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: "22px",
+              padding: "24px",
+              border: "1px solid #eee",
+              boxShadow: "0 16px 32px rgba(0, 0, 0, 0.07)",
+              color: "#666",
+              lineHeight: "1.7",
+            }}
+          >
+            No live campaigns are available yet. Add campaigns in Supabase or create one from this app
+            to make the list appear here.
+          </div>
+        )}
       </div>
 
       <section

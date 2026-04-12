@@ -6,6 +6,7 @@ import {
   uploadAchieverPhoto,
   uploadAchieverVideo,
 } from "../lib/supabase";
+import ImagePreviewModal from "../components/ImagePreviewModal";
 
 const Section = ({ id, title, children }) => (
   <section
@@ -20,31 +21,6 @@ const Section = ({ id, title, children }) => (
   </section>
 );
 
-const starterTestimonies = [
-  {
-    id: "starter-1",
-    name: "Aarav",
-    role: "Student volunteer",
-    image: "/aakash.jpg",
-    image_url: "/aakash.jpg",
-    quote:
-      "Picking up plastic waste made the problem feel real. It is not just litter on the roadside; it affects animals, drains, and the dignity of the places we live in.",
-    testimony:
-      "Picking up plastic waste made the problem feel real. It is not just litter on the roadside; it affects animals, drains, and the dignity of the places we live in.",
-  },
-  {
-    id: "starter-2",
-    name: "Meera",
-    role: "Weekend cleanup participant",
-    image: "/kavya.jpg",
-    image_url: "/kavya.jpg",
-    quote:
-      "The biggest change for me was realizing how small habits build into large impact. Carrying my own bottle and refusing single-use items now feels like a responsibility, not an inconvenience.",
-    testimony:
-      "The biggest change for me was realizing how small habits build into large impact. Carrying my own bottle and refusing single-use items now feels like a responsibility, not an inconvenience.",
-  },
-];
-
 function AchieversPage() {
   const [submittedTestimonies, setSubmittedTestimonies] = useState([]);
   const [formState, setFormState] = useState({
@@ -57,6 +33,7 @@ function AchieversPage() {
   const [status, setStatus] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
     let ignore = false;
@@ -155,7 +132,7 @@ function AchieversPage() {
     }
   };
 
-  const visibleTestimonies = [...starterTestimonies, ...submittedTestimonies];
+  const visibleTestimonies = submittedTestimonies;
 
   return (
     <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "40px 20px 120px" }}>
@@ -174,26 +151,6 @@ function AchieversPage() {
         more people to participate.
       </p>
 
-      <Section id="achievers-hero" title="People Taking Action">
-        <img
-          src="/beforeafter.jpeg"
-          alt="Plastic pollution awareness visual"
-          style={{
-            display: "block",
-            width: "100%",
-            maxWidth: "820px",
-            margin: "0 auto 18px",
-            borderRadius: "18px",
-            boxShadow: "0 14px 32px rgba(0, 0, 0, 0.16)",
-          }}
-        />
-        <p style={{ maxWidth: "820px", margin: "0 auto", textAlign: "center" }}>
-          Every cleanup effort sends a clear message: plastic waste is not someone else&apos;s
-          problem. Community action, awareness, and responsible disposal all work together to create
-          visible change.
-        </p>
-      </Section>
-
       <Section id="achievers-testimonies" title="What People Feel About Plastic Waste">
         {isLoading ? (
           <p style={{ marginBottom: "16px", color: "#666" }}>Loading live achievers...</p>
@@ -207,7 +164,7 @@ function AchieversPage() {
             scrollSnapType: "x mandatory",
           }}
         >
-          {visibleTestimonies.map((item) => (
+          {visibleTestimonies.length > 0 ? visibleTestimonies.map((item) => (
             <article
               key={item.id || item.name}
               style={{
@@ -225,6 +182,12 @@ function AchieversPage() {
               <img
                 src={item.image || item.image_url || "/home.png"}
                 alt={item.name}
+                onClick={() =>
+                  setSelectedImage({
+                    src: item.image || item.image_url || "/home.png",
+                    alt: item.name,
+                  })
+                }
                 style={{
                   display: "block",
                   width: "100%",
@@ -232,6 +195,7 @@ function AchieversPage() {
                   objectFit: "cover",
                   borderRadius: "12px",
                   marginBottom: "16px",
+                  cursor: "zoom-in",
                 }}
               />
               {item.video || item.video_url ? (
@@ -256,7 +220,12 @@ function AchieversPage() {
               <strong style={{ display: "block", color: "#146c43" }}>{item.name}</strong>
               <span style={{ color: "#6e625d", fontSize: "14px" }}>{item.role}</span>
             </article>
-          ))}
+          )) : (
+            <p style={{ margin: 0, color: "#666" }}>
+              No achiever stories are live yet. Add entries in Supabase or submit one below to make
+              this section appear here.
+            </p>
+          )}
         </div>
       </Section>
 
@@ -383,6 +352,13 @@ function AchieversPage() {
           ) : null}
         </div>
       </Section>
+
+      <ImagePreviewModal
+        show={Boolean(selectedImage)}
+        onHide={() => setSelectedImage(null)}
+        src={selectedImage?.src}
+        alt={selectedImage?.alt}
+      />
     </div>
   );
 }

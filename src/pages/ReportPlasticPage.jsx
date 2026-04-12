@@ -5,6 +5,7 @@ import {
   hasSupabaseConfig,
   uploadReportPhoto,
 } from "../lib/supabase";
+import ImagePreviewModal from "../components/ImagePreviewModal";
 
 const starterReports = [
   {
@@ -40,6 +41,7 @@ function ReportPlasticPage() {
     address: "",
     photo: null,
   });
+  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
     let ignore = false;
@@ -159,12 +161,19 @@ function ReportPlasticPage() {
               <img
                 src={report.image_url}
                 alt={report.area}
+                onClick={() =>
+                  setSelectedImage({
+                    src: report.image_url,
+                    alt: report.area,
+                  })
+                }
                 style={{
                   display: "block",
                   width: "100%",
                   height: "210px",
                   objectFit: "cover",
                   background: "#f4f4f4",
+                  cursor: "zoom-in",
                 }}
               />
               <div style={{ padding: "18px" }}>
@@ -277,6 +286,13 @@ function ReportPlasticPage() {
           </button>
         </form>
       </section>
+
+      <ImagePreviewModal
+        show={Boolean(selectedImage)}
+        onHide={() => setSelectedImage(null)}
+        src={selectedImage?.src}
+        alt={selectedImage?.alt}
+      />
     </div>
   );
 }

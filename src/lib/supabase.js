@@ -4,6 +4,7 @@ const achieversTable = import.meta.env.VITE_SUPABASE_ACHIEVERS_TABLE || "achieve
 const campaignsTable = import.meta.env.VITE_SUPABASE_CAMPAIGNS_TABLE || "campaigns";
 const campaignMembershipsTable =
   import.meta.env.VITE_SUPABASE_CAMPAIGN_MEMBERSHIPS_TABLE || "campaign_memberships";
+const userProfilesTable = import.meta.env.VITE_SUPABASE_USER_PROFILES_TABLE || "user_profiles";
 const achieverBucket = import.meta.env.VITE_SUPABASE_ACHIEVER_BUCKET || "achiever-photos";
 const reportsTable = import.meta.env.VITE_SUPABASE_REPORTS_TABLE || "plastic_reports";
 const reportBucket = import.meta.env.VITE_SUPABASE_REPORT_BUCKET || "plastic-report-photos";
@@ -241,6 +242,28 @@ export async function fetchCampaigns() {
   return parseResponse(response, "Could not load campaigns.");
 }
 
+export async function fetchOwnedCampaigns(userId, accessToken) {
+  ensureSupabaseConfig();
+
+  const query = new URLSearchParams({
+    select: "id,is_active",
+    owner_user_id: `eq.${userId}`,
+    is_active: "eq.true",
+    order: "created_at.desc",
+  });
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/${campaignsTable}?${query.toString()}`, {
+    headers: getHeaders(
+      {
+        Accept: "application/json",
+      },
+      accessToken
+    ),
+  });
+
+  return parseResponse(response, "Could not load owned campaigns.");
+}
+
 export async function createCampaign(entry, accessToken) {
   ensureSupabaseConfig();
 
@@ -303,6 +326,80 @@ export async function joinCampaign(entry, accessToken) {
   return Array.isArray(rows) ? rows[0] ?? null : rows;
 }
 
+export async function leaveCampaign(userId, campaignId, accessToken) {
+  ensureSupabaseConfig();
+
+  const query = new URLSearchParams({
+    user_id: `eq.${userId}`,
+    campaign_id: `eq.${campaignId}`,
+  });
+
+  const response = await fetch(
+    `${supabaseUrl}/rest/v1/${campaignMembershipsTable}?${query.toString()}`,
+    {
+      method: "DELETE",
+      headers: getHeaders(
+        {
+          Prefer: "return=representation",
+        },
+        accessToken
+      ),
+    }
+  );
+
+  const rows = await parseResponse(response, "Could not remove the campaign membership.");
+  return Array.isArray(rows) ? rows[0] ?? null : rows;
+}
+
+export async function upsertUserProfile(entry, accessToken) {
+  ensureSupabaseConfig();
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/${userProfilesTable}`, {
+    method: "POST",
+    headers: getHeaders(
+      {
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates,return=representation",
+      },
+      accessToken
+    ),
+    body: JSON.stringify(entry),
+  });
+
+  const rows = await parseResponse(response, "Could not update the user profile.");
+  return Array.isArray(rows) ? rows[0] ?? null : rows;
+}
+
+export async function syncUserActiveCampaignCount(userId, accessToken, profileData = {}) {
+  ensureSupabaseConfig();
+
+  const [ownedCampaigns, memberships] = await Promise.all([
+    fetchOwnedCampaigns(userId, accessToken),
+    fetchUserCampaignMemberships(userId, accessToken),
+  ]);
+
+  const activeCampaignIds = new Set([
+    ...ownedCampaigns
+      .filter((campaign) => campaign.is_active !== false)
+      .map((campaign) => String(campaign.id)),
+    ...memberships.map((membership) => String(membership.campaign_id)),
+  ]);
+
+  const profile = await upsertUserProfile(
+    {
+      user_id: userId,
+      active_campaign_count: activeCampaignIds.size,
+      ...profileData,
+    },
+    accessToken
+  );
+
+  return {
+    count: activeCampaignIds.size,
+    profile,
+  };
+}
+
 export async function fetchPlasticReports() {
   ensureSupabaseConfig();
 
@@ -343,5 +440,6 @@ export {
   campaignMembershipsTable,
   reportBucket,
   reportsTable,
+  userProfilesTable,
   hasSupabaseConfig,
 };

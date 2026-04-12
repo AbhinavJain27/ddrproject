@@ -125,22 +125,39 @@ function NavScrollExample() {
                 {item.label}
               </Nav.Link>
             ))}
-            <button
-              type="button"
-              onClick={signOut}
-              style={{
-                border: "none",
-                borderRadius: "999px",
-                padding: "10px 16px",
-                background: "rgba(255,255,255,0.14)",
-                color: "#fff",
-                fontWeight: "700",
-                marginLeft: "8px",
-                cursor: "pointer",
-              }}
-            >
-              {user?.email ? `Sign out` : "Sign out"}
-            </button>
+            {user ? (
+              <button
+                type="button"
+                onClick={signOut}
+                style={{
+                  border: "none",
+                  borderRadius: "999px",
+                  padding: "10px 16px",
+                  background: "rgba(255,255,255,0.14)",
+                  color: "#fff",
+                  fontWeight: "700",
+                  marginLeft: "8px",
+                  cursor: "pointer",
+                }}
+              >
+                Sign out
+              </button>
+            ) : (
+              <Nav.Link
+                as={Link}
+                to="/auth"
+                style={{
+                  color: "#fff",
+                  fontWeight: "700",
+                  padding: "10px 16px",
+                  borderRadius: "999px",
+                  background: "rgba(255,255,255,0.14)",
+                  marginLeft: "8px",
+                }}
+              >
+                Sign in
+              </Nav.Link>
+            )}
           </Nav>
         </Navbar.Collapse>
       </Container>
