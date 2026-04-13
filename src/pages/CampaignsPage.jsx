@@ -7,8 +7,32 @@ import {
   joinCampaign,
   leaveCampaign,
   syncUserActiveCampaignCount,
+  syncUserPlasticCollectedTotal,
+  updateCampaign,
+  updateCampaignMembership,
 } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
+
+function parsePlasticCollected(value) {
+  if (typeof value === "number") {
+    return value;
+  }
+
+  if (!value) {
+    return 0;
+  }
+
+  const normalized = String(value).replace(/,/g, "");
+  const match = normalized.match(/[\d.]+/);
+  return match ? Number(match[0]) : 0;
+}
+
+function formatPlasticCollected(value) {
+  const normalizedValue = Number.isFinite(value) ? value : 0;
+  return `${normalizedValue.toLocaleString("en-IN", {
+    maximumFractionDigits: 2,
+  })} kg`;
+}
 
 function CampaignsPage() {
   const { user, session } = useAuth();
@@ -16,8 +40,12 @@ function CampaignsPage() {
   const [campaigns, setCampaigns] = useState([]);
   const [status, setStatus] = useState("");
   const [joinedCampaignIds, setJoinedCampaignIds] = useState([]);
+  const [membershipsByCampaignId, setMembershipsByCampaignId] = useState({});
+  const [contributionInputs, setContributionInputs] = useState({});
   const [joiningCampaignId, setJoiningCampaignId] = useState("");
   const [removingCampaignId, setRemovingCampaignId] = useState("");
+  const [savingContributionId, setSavingContributionId] = useState("");
+  const [userContributionTotal, setUserContributionTotal] = useState(0);
 
   useEffect(() => {
     let ignore = false;
@@ -39,11 +67,25 @@ function CampaignsPage() {
         if (!ignore) {
           setCampaigns(campaignRows);
           setJoinedCampaignIds(membershipRows.map((membership) => String(membership.campaign_id)));
+          setMembershipsByCampaignId(
+            Object.fromEntries(membershipRows.map((membership) => [String(membership.campaign_id), membership]))
+          );
+          setContributionInputs(
+            Object.fromEntries(
+              membershipRows.map((membership) => [
+                String(membership.campaign_id),
+                String(membership.contribution_kg ?? ""),
+              ])
+            )
+          );
+          setUserContributionTotal(
+            membershipRows.reduce((sum, membership) => sum + (Number(membership.contribution_kg) || 0), 0)
+          );
           setStatus("");
         }
-      } catch {
+      } catch (error) {
         if (!ignore) {
-          setStatus("Could not load live campaigns right now, so placeholder campaigns are being shown.");
+          setStatus(error.message || "Could not load live campaigns right now.");
         }
       }
     }
@@ -80,10 +122,18 @@ function CampaignsPage() {
     setStatus("");
 
     try {
-      await joinCampaign(
+      const createdMembership = await joinCampaign(
         {
           user_id: user.id,
           campaign_id: campaignId,
+        },
+        session.access_token
+      );
+
+      const updatedCampaign = await updateCampaign(
+        {
+          id: campaign.id,
+          joined_people: Math.max(0, Number(campaign.joined_people ?? campaign.joinedPeople ?? 0) + 1),
         },
         session.access_token
       );
@@ -92,8 +142,32 @@ function CampaignsPage() {
         email: user.email || null,
         full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
       });
+      const totalResult = await syncUserPlasticCollectedTotal(user.id, session.access_token, {
+        email: user.email || null,
+        full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+      });
 
       setJoinedCampaignIds((current) => [...current, campaignId]);
+      setMembershipsByCampaignId((current) => ({
+        ...current,
+        [campaignId]: createdMembership || {
+          ...(current[campaignId] || {}),
+          campaign_id: campaign.id,
+          contribution_kg: 0,
+        },
+      }));
+      setContributionInputs((current) => ({
+        ...current,
+        [campaignId]: "0",
+      }));
+      setUserContributionTotal(totalResult.total);
+      if (updatedCampaign) {
+        setCampaigns((current) =>
+          current.map((currentCampaign) =>
+            String(currentCampaign.id) === campaignId ? { ...currentCampaign, ...updatedCampaign } : currentCampaign
+          )
+        );
+      }
     } catch (error) {
       setStatus(error.message || "Could not join this campaign right now.");
     } finally {
@@ -118,14 +192,51 @@ function CampaignsPage() {
     setStatus("");
 
     try {
+      const existingContribution = Number(membershipsByCampaignId[campaignId]?.contribution_kg) || 0;
       await leaveCampaign(user.id, campaignId, session.access_token);
+
+      const updatedCampaign = await updateCampaign(
+        {
+          id: campaign.id,
+          joined_people: Math.max(0, Number(campaign.joined_people ?? campaign.joinedPeople ?? 0) - 1),
+          plastic_collected: formatPlasticCollected(
+            Math.max(
+              0,
+              parsePlasticCollected(campaign.plastic_collected || campaign.plasticCollected) - existingContribution
+            )
+          ),
+        },
+        session.access_token
+      );
 
       await syncUserActiveCampaignCount(user.id, session.access_token, {
         email: user.email || null,
         full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
       });
+      const totalResult = await syncUserPlasticCollectedTotal(user.id, session.access_token, {
+        email: user.email || null,
+        full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+      });
 
       setJoinedCampaignIds((current) => current.filter((id) => id !== campaignId));
+      setMembershipsByCampaignId((current) => {
+        const next = { ...current };
+        delete next[campaignId];
+        return next;
+      });
+      setContributionInputs((current) => {
+        const next = { ...current };
+        delete next[campaignId];
+        return next;
+      });
+      setUserContributionTotal(totalResult.total);
+      if (updatedCampaign) {
+        setCampaigns((current) =>
+          current.map((currentCampaign) =>
+            String(currentCampaign.id) === campaignId ? { ...currentCampaign, ...updatedCampaign } : currentCampaign
+          )
+        );
+      }
     } catch (error) {
       setStatus(error.message || "Could not remove this campaign right now.");
     } finally {
@@ -160,6 +271,11 @@ function CampaignsPage() {
             ? "These are the campaigns currently linked to your account."
             : "Sign in to view the campaigns linked to your account."}
         </p>
+        {isAuthenticated ? (
+          <p style={{ color: "#146c43", lineHeight: "1.7", marginBottom: "16px", fontWeight: "600" }}>
+            Your total collected contribution: {formatPlasticCollected(userContributionTotal)}
+          </p>
+        ) : null}
 
         {isAuthenticated && activeCampaignsForUser.length > 0 ? (
           <div style={{ display: "grid", gap: "12px" }}>
@@ -189,6 +305,141 @@ function CampaignsPage() {
                     <span style={{ color: "#555" }}>
                       {campaign.cities.join(", ")} | {campaign.plastic_collected || campaign.plasticCollected}
                     </span>
+                    {campaign.owner_user_id === user?.id ? null : (
+                      <div
+                        style={{
+                          marginTop: "12px",
+                          display: "flex",
+                          gap: "10px",
+                          flexWrap: "wrap",
+                          alignItems: "end",
+                        }}
+                      >
+                        <label
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "6px",
+                            color: "#146c43",
+                            fontWeight: "600",
+                          }}
+                        >
+                          <span>My contribution (in kgs)</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={contributionInputs[String(campaign.id)] ?? ""}
+                            onChange={(event) =>
+                              setContributionInputs((current) => ({
+                                ...current,
+                                [String(campaign.id)]: event.target.value,
+                              }))
+                            }
+                            style={{
+                              padding: "10px 12px",
+                              borderRadius: "10px",
+                              border: "1px solid #cfe3d5",
+                              minWidth: "180px",
+                            }}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const campaignId = String(campaign.id);
+                            const membership = membershipsByCampaignId[campaignId];
+
+                            if (!membership || !user?.id || !session?.access_token) {
+                              setStatus("Please sign in again to save your contribution.");
+                              return;
+                            }
+
+                            const nextContribution = Number(contributionInputs[campaignId]);
+
+                            if (Number.isNaN(nextContribution) || nextContribution < 0) {
+                              setStatus("Enter a valid non-negative contribution amount.");
+                              return;
+                            }
+
+                            const previousContribution = Number(membership.contribution_kg) || 0;
+                            const delta = nextContribution - previousContribution;
+
+                            setSavingContributionId(campaignId);
+                            setStatus("");
+
+                            try {
+                              const updatedMembership = await updateCampaignMembership(
+                                membership.id,
+                                { contribution_kg: nextContribution },
+                                session.access_token
+                              );
+
+                              const updatedCampaign = await updateCampaign(
+                                {
+                                  id: campaign.id,
+                                  plastic_collected: formatPlasticCollected(
+                                    Math.max(
+                                      0,
+                                      parsePlasticCollected(
+                                        campaign.plastic_collected || campaign.plasticCollected
+                                      ) + delta
+                                    )
+                                  ),
+                                },
+                                session.access_token
+                              );
+
+                              const totalResult = await syncUserPlasticCollectedTotal(
+                                user.id,
+                                session.access_token,
+                                {
+                                  email: user.email || null,
+                                  full_name:
+                                    user.user_metadata?.full_name || user.user_metadata?.name || null,
+                                }
+                              );
+
+                              if (updatedMembership) {
+                                setMembershipsByCampaignId((current) => ({
+                                  ...current,
+                                  [campaignId]: updatedMembership,
+                                }));
+                              }
+
+                              if (updatedCampaign) {
+                                setCampaigns((current) =>
+                                  current.map((currentCampaign) =>
+                                    String(currentCampaign.id) === campaignId
+                                      ? { ...currentCampaign, ...updatedCampaign }
+                                      : currentCampaign
+                                  )
+                                );
+                              }
+
+                              setUserContributionTotal(totalResult.total);
+                            } catch (error) {
+                              setStatus(error.message || "Could not save your contribution right now.");
+                            } finally {
+                              setSavingContributionId("");
+                            }
+                          }}
+                          disabled={savingContributionId === String(campaign.id)}
+                          style={{
+                            border: "none",
+                            borderRadius: "999px",
+                            background: "#146c43",
+                            color: "#fff",
+                            padding: "10px 18px",
+                            fontWeight: "700",
+                            cursor: savingContributionId === String(campaign.id) ? "default" : "pointer",
+                            opacity: savingContributionId === String(campaign.id) ? 0.75 : 1,
+                          }}
+                        >
+                          {savingContributionId === String(campaign.id) ? "Saving..." : "Save"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                   {campaign.owner_user_id === user?.id ? (
                     <span style={{ color: "#146c43", fontWeight: "700" }}>Owner</span>
@@ -322,10 +573,6 @@ function CampaignsPage() {
               <div style={{ background: "#f4fbf6", borderRadius: "16px", padding: "14px" }}>
                 <strong style={{ display: "block", color: "#146c43", marginBottom: "6px" }}>People Joined</strong>
                 <span style={{ color: "#4a4a4a" }}>{campaign.joined_people ?? campaign.joinedPeople}</span>
-              </div>
-              <div style={{ background: "#f4fbf6", borderRadius: "16px", padding: "14px" }}>
-                <strong style={{ display: "block", color: "#146c43", marginBottom: "6px" }}>Social Followers</strong>
-                <span style={{ color: "#4a4a4a" }}>{campaign.social_followers ?? campaign.socialFollowers}</span>
               </div>
               <div style={{ background: "#f4fbf6", borderRadius: "16px", padding: "14px" }}>
                 <strong style={{ display: "block", color: "#146c43", marginBottom: "6px" }}>Next Drive</strong>

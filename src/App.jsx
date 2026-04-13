@@ -16,8 +16,6 @@ import CampaignsPage from './pages/CampaignsPage';
 import ReportPlasticPage from './pages/ReportPlasticPage';
 import StartCampaignPage from './pages/StartCampaignPage';
 import AuthPage from './pages/AuthPage';
-import Footer from './components/Footer';
-import OffCanvas from './components/OffCanvas'
 import ScrollToTop from './components/ScrollToTop';
 import ScrollToHash from './components/ScrollToHash';
 
@@ -27,8 +25,7 @@ function App() {
       <Navbar />
       <ScrollToTop />
       <ScrollToHash />
-      <OffCanvas />
-      <div style={{ flex: 1, paddingBottom: "60px" }}>
+      <div style={{ flex: 1 }}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/page1" element={<PageOne />} />
@@ -46,8 +43,6 @@ function App() {
           <Route path="*" element={<HomePage />} />
         </Routes>
       </div>
-
-      <Footer />
     </div>
   );
 }

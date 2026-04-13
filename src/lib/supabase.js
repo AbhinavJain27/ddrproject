@@ -6,7 +6,7 @@ const campaignMembershipsTable =
   import.meta.env.VITE_SUPABASE_CAMPAIGN_MEMBERSHIPS_TABLE || "campaign_memberships";
 const userProfilesTable = import.meta.env.VITE_SUPABASE_USER_PROFILES_TABLE || "user_profiles";
 const achieverBucket = import.meta.env.VITE_SUPABASE_ACHIEVER_BUCKET || "achiever-photos";
-const reportsTable = import.meta.env.VITE_SUPABASE_REPORTS_TABLE || "plastic_reports";
+const plasticReportsTable = "plastic_reports";
 const reportBucket = import.meta.env.VITE_SUPABASE_REPORT_BUCKET || "plastic-report-photos";
 const sessionStorageKey = "plastic-management-auth-session";
 
@@ -208,6 +208,10 @@ export async function uploadReportPhoto(file) {
   return uploadAssetToBucket(file, reportBucket, "Could not upload the report photo.");
 }
 
+export async function uploadReportVideo(file) {
+  return uploadAssetToBucket(file, reportBucket, "Could not upload the report video.");
+}
+
 export async function createAchieverEntry(entry) {
   ensureSupabaseConfig();
 
@@ -229,7 +233,7 @@ export async function fetchCampaigns() {
 
   const query = new URLSearchParams({
     select:
-      "id,name,organizer,contact_email,cities,plastic_collected,joined_people,social_followers,next_drive,description,owner_user_id,is_active,created_at",
+      "id,name,organizer,contact_email,cities,plastic_collected,joined_people,next_drive,description,owner_user_id,is_active,created_at",
     order: "created_at.desc",
   });
 
@@ -283,11 +287,36 @@ export async function createCampaign(entry, accessToken) {
   return Array.isArray(rows) ? rows[0] : rows;
 }
 
+export async function updateCampaign(entry, accessToken) {
+  ensureSupabaseConfig();
+
+  const { id, ...updates } = entry;
+
+  const query = new URLSearchParams({
+    id: `eq.${id}`,
+  });
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/${campaignsTable}?${query.toString()}`, {
+    method: "PATCH",
+    headers: getHeaders(
+      {
+        "Content-Type": "application/json",
+        Prefer: "return=representation",
+      },
+      accessToken
+    ),
+    body: JSON.stringify(updates),
+  });
+
+  const rows = await parseResponse(response, "Could not update the campaign.");
+  return Array.isArray(rows) ? rows[0] ?? null : rows;
+}
+
 export async function fetchUserCampaignMemberships(userId, accessToken) {
   ensureSupabaseConfig();
 
   const query = new URLSearchParams({
-    select: "id,user_id,campaign_id,created_at",
+    select: "id,user_id,campaign_id,contribution_kg,created_at",
     user_id: `eq.${userId}`,
     order: "created_at.desc",
   });
@@ -323,6 +352,32 @@ export async function joinCampaign(entry, accessToken) {
   });
 
   const rows = await parseResponse(response, "Could not join the campaign.");
+  return Array.isArray(rows) ? rows[0] ?? null : rows;
+}
+
+export async function updateCampaignMembership(membershipId, entry, accessToken) {
+  ensureSupabaseConfig();
+
+  const query = new URLSearchParams({
+    id: `eq.${membershipId}`,
+  });
+
+  const response = await fetch(
+    `${supabaseUrl}/rest/v1/${campaignMembershipsTable}?${query.toString()}`,
+    {
+      method: "PATCH",
+      headers: getHeaders(
+        {
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+        },
+        accessToken
+      ),
+      body: JSON.stringify(entry),
+    }
+  );
+
+  const rows = await parseResponse(response, "Could not update the campaign membership.");
   return Array.isArray(rows) ? rows[0] ?? null : rows;
 }
 
@@ -400,15 +455,38 @@ export async function syncUserActiveCampaignCount(userId, accessToken, profileDa
   };
 }
 
+export async function syncUserPlasticCollectedTotal(userId, accessToken, profileData = {}) {
+  ensureSupabaseConfig();
+
+  const memberships = await fetchUserCampaignMemberships(userId, accessToken);
+  const total = memberships.reduce((sum, membership) => {
+    return sum + (Number(membership.contribution_kg) || 0);
+  }, 0);
+
+  const profile = await upsertUserProfile(
+    {
+      user_id: userId,
+      total_plastic_collected_kg: total,
+      ...profileData,
+    },
+    accessToken
+  );
+
+  return {
+    total,
+    profile,
+  };
+}
+
 export async function fetchPlasticReports() {
   ensureSupabaseConfig();
 
   const query = new URLSearchParams({
-    select: "id,reporter_name,area,address,image_url,created_at",
+    select: "id,reporter_name,area,address,image_url,video_url,created_at",
     order: "created_at.desc",
   });
 
-  const response = await fetch(`${supabaseUrl}/rest/v1/${reportsTable}?${query.toString()}`, {
+  const response = await fetch(`${supabaseUrl}/rest/v1/${plasticReportsTable}?${query.toString()}`, {
     headers: getHeaders({
       Accept: "application/json",
     }),
@@ -420,7 +498,7 @@ export async function fetchPlasticReports() {
 export async function createPlasticReport(entry) {
   ensureSupabaseConfig();
 
-  const response = await fetch(`${supabaseUrl}/rest/v1/${reportsTable}`, {
+  const response = await fetch(`${supabaseUrl}/rest/v1/${plasticReportsTable}`, {
     method: "POST",
     headers: getHeaders({
       "Content-Type": "application/json",
@@ -438,8 +516,8 @@ export {
   achieversTable,
   campaignsTable,
   campaignMembershipsTable,
+  plasticReportsTable,
   reportBucket,
-  reportsTable,
   userProfilesTable,
   hasSupabaseConfig,
 };

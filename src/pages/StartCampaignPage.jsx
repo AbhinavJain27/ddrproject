@@ -18,7 +18,6 @@ function StartCampaignPage() {
     cities: "",
     plasticCollected: "",
     joinedPeople: "",
-    socialFollowers: "",
     nextDrive: "",
     description: "",
   });
@@ -129,7 +128,6 @@ function StartCampaignPage() {
         cities: formState.cities.split(",").map((city) => city.trim()).filter(Boolean),
         plastic_collected: formState.plasticCollected,
         joined_people: Number(formState.joinedPeople) || 0,
-        social_followers: Number(formState.socialFollowers) || 0,
         next_drive: formState.nextDrive,
         description: formState.description,
         owner_user_id: user.id,
@@ -297,20 +295,6 @@ function StartCampaignPage() {
               min="0"
               name="joinedPeople"
               value={formState.joinedPeople}
-              onChange={handleChange}
-              onClick={() => requestIdentityConfirmation()}
-              required
-              style={{ padding: "12px 14px", borderRadius: "12px", border: "1px solid #ccc" }}
-            />
-          </label>
-
-          <label style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <span>Social media followers</span>
-            <input
-              type="number"
-              min="0"
-              name="socialFollowers"
-              value={formState.socialFollowers}
               onChange={handleChange}
               onClick={() => requestIdentityConfirmation()}
               required

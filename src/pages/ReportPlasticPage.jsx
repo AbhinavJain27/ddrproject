@@ -4,32 +4,9 @@ import {
   fetchPlasticReports,
   hasSupabaseConfig,
   uploadReportPhoto,
+  uploadReportVideo,
 } from "../lib/supabase";
 import ImagePreviewModal from "../components/ImagePreviewModal";
-
-const starterReports = [
-  {
-    id: "report-1",
-    reporter_name: "Aditi",
-    area: "Yamuna Bank",
-    address: "Near the service road beside the riverfront walkway, New Delhi",
-    image_url: "/hardikimages/image 11.png",
-  },
-  {
-    id: "report-2",
-    reporter_name: "Rahul",
-    area: "Versova stretch",
-    address: "Public beach access lane near the fishing colony, Mumbai",
-    image_url: "/hardikimages/image 12.png",
-  },
-  {
-    id: "report-3",
-    reporter_name: "Sneha",
-    area: "Koramangala drain edge",
-    address: "Near the 5th Block junction stormwater drain, Bengaluru",
-    image_url: "/hardikimages/image 14.png",
-  },
-];
 
 function ReportPlasticPage() {
   const [reports, setReports] = useState([]);
@@ -40,6 +17,7 @@ function ReportPlasticPage() {
     area: "",
     address: "",
     photo: null,
+    video: null,
   });
   const [selectedImage, setSelectedImage] = useState(null);
 
@@ -93,11 +71,13 @@ function ReportPlasticPage() {
 
     try {
       const imageUrl = await uploadReportPhoto(formState.photo);
+      const videoUrl = await uploadReportVideo(formState.video);
       const createdRow = await createPlasticReport({
         reporter_name: formState.reporterName,
         area: formState.area,
         address: formState.address,
         image_url: imageUrl,
+        video_url: videoUrl,
       });
 
       setReports((current) => [createdRow, ...current]);
@@ -106,6 +86,7 @@ function ReportPlasticPage() {
         area: "",
         address: "",
         photo: null,
+        video: null,
       });
       event.target.reset();
       setStatus("Your plastic accumulation report has been added.");
@@ -116,7 +97,7 @@ function ReportPlasticPage() {
     }
   };
 
-  const visibleReports = [...starterReports, ...reports];
+  const visibleReports = reports;
 
   return (
     <div style={{ maxWidth: "1140px", margin: "0 auto", padding: "40px 20px 120px" }}>
@@ -143,7 +124,7 @@ function ReportPlasticPage() {
             scrollSnapType: "x mandatory",
           }}
         >
-          {visibleReports.map((report) => (
+          {visibleReports.length > 0 ? visibleReports.map((report) => (
             <article
               key={report.id}
               style={{
@@ -176,6 +157,20 @@ function ReportPlasticPage() {
                   cursor: "zoom-in",
                 }}
               />
+              {report.video_url ? (
+                <video
+                  controls
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    maxHeight: "210px",
+                    background: "#000",
+                  }}
+                >
+                  <source src={report.video_url} />
+                  Your browser does not support embedded videos.
+                </video>
+              ) : null}
               <div style={{ padding: "18px" }}>
                 <h3 style={{ color: "#146c43", marginBottom: "8px" }}>{report.area}</h3>
                 <p style={{ color: "#555", lineHeight: "1.6", marginBottom: "12px" }}>{report.address}</p>
@@ -184,7 +179,12 @@ function ReportPlasticPage() {
                 </p>
               </div>
             </article>
-          ))}
+          )) : (
+            <p style={{ margin: 0, color: "#666" }}>
+              No live plastic reports are available yet. Add entries in Supabase or submit one
+              below to make this section appear here.
+            </p>
+          )}
         </div>
       </section>
 
@@ -259,6 +259,22 @@ function ReportPlasticPage() {
               accept="image/*"
               onChange={handleChange}
               required
+              style={{
+                padding: "10px",
+                borderRadius: "12px",
+                border: "1px solid #ccc",
+                background: "#fffaf8",
+              }}
+            />
+          </label>
+
+          <label style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "20px" }}>
+            <span>Upload a video of the surroundings</span>
+            <input
+              type="file"
+              name="video"
+              accept="video/*"
+              onChange={handleChange}
               style={{
                 padding: "10px",
                 borderRadius: "12px",
