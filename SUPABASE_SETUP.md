@@ -217,3 +217,70 @@ for insert
 to anon
 with check (true);
 ```
+
+Create the pickup requests table with this SQL:
+
+```sql
+create table if not exists public.pickup_requests (
+  id bigint generated always as identity primary key,
+  requester_name text not null,
+  contact_phone text not null,
+  area text not null,
+  address text not null,
+  garbage_description text not null,
+  notes text,
+  image_url text,
+  status text not null default 'pending',
+  ragman_name text,
+  ragman_contact text,
+  accepted_at timestamptz,
+  collected_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+alter table public.pickup_requests enable row level security;
+
+drop policy if exists "Allow public read access to pickup requests" on public.pickup_requests;
+drop policy if exists "Allow public insert access to pickup requests" on public.pickup_requests;
+drop policy if exists "Allow public update access to pickup requests" on public.pickup_requests;
+
+create policy "Allow public read access to pickup requests"
+on public.pickup_requests
+for select
+to anon
+using (true);
+
+create policy "Allow public insert access to pickup requests"
+on public.pickup_requests
+for insert
+to anon
+with check (true);
+
+create policy "Allow public update access to pickup requests"
+on public.pickup_requests
+for update
+to anon
+using (true)
+with check (true);
+```
+
+Then create a public storage bucket named `pickup-photos`.
+
+Add these policies for the pickup photos bucket:
+
+```sql
+drop policy if exists "Public can view pickup photos" on storage.objects;
+drop policy if exists "Public can upload pickup photos" on storage.objects;
+
+create policy "Public can view pickup photos"
+on storage.objects
+for select
+to anon
+using (bucket_id = 'pickup-photos');
+
+create policy "Public can upload pickup photos"
+on storage.objects
+for insert
+to anon
+with check (bucket_id = 'pickup-photos');
+```

@@ -15,7 +15,8 @@ function NavScrollExample() {
     { path: "/page4", label: "Politics" },
     { path: "/page5", label: "Advancements" },
     { path: "/page6", label: "Recovery & Circular Economy" },
-    { path: "/page7", label: "Integrated Perspective" }
+    { path: "/page7", label: "Integrated Perspective" },
+    { path: "/pickup", label: "🗑️ Pickup Requests" },
   ];
 
   return (

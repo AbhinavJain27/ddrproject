@@ -8,6 +8,8 @@ const userProfilesTable = import.meta.env.VITE_SUPABASE_USER_PROFILES_TABLE || "
 const achieverBucket = import.meta.env.VITE_SUPABASE_ACHIEVER_BUCKET || "achiever-photos";
 const plasticReportsTable = "plastic_reports";
 const reportBucket = import.meta.env.VITE_SUPABASE_REPORT_BUCKET || "plastic-report-photos";
+const pickupRequestsTable = "pickup_requests";
+const pickupBucket = "pickup-photos";
 const sessionStorageKey = "plastic-management-auth-session";
 
 const hasSupabaseConfig = Boolean(supabaseUrl && supabaseAnonKey);
@@ -511,6 +513,59 @@ export async function createPlasticReport(entry) {
   return Array.isArray(rows) ? rows[0] : rows;
 }
 
+export async function uploadPickupPhoto(file) {
+  return uploadAssetToBucket(file, pickupBucket, "Could not upload the pickup request photo.");
+}
+
+export async function fetchPickupRequests() {
+  ensureSupabaseConfig();
+
+  const query = new URLSearchParams({
+    select: "id,requester_name,contact_phone,area,address,garbage_description,notes,image_url,status,ragman_name,ragman_contact,accepted_at,collected_at,created_at",
+    order: "created_at.desc",
+  });
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/${pickupRequestsTable}?${query.toString()}`, {
+    headers: getHeaders({ Accept: "application/json" }),
+  });
+
+  return parseResponse(response, "Could not load pickup requests.");
+}
+
+export async function createPickupRequest(entry) {
+  ensureSupabaseConfig();
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/${pickupRequestsTable}`, {
+    method: "POST",
+    headers: getHeaders({
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    }),
+    body: JSON.stringify(entry),
+  });
+
+  const rows = await parseResponse(response, "Could not submit the pickup request.");
+  return Array.isArray(rows) ? rows[0] : rows;
+}
+
+export async function updatePickupRequest(id, updates) {
+  ensureSupabaseConfig();
+
+  const query = new URLSearchParams({ id: `eq.${id}` });
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/${pickupRequestsTable}?${query.toString()}`, {
+    method: "PATCH",
+    headers: getHeaders({
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    }),
+    body: JSON.stringify(updates),
+  });
+
+  const rows = await parseResponse(response, "Could not update the pickup request.");
+  return Array.isArray(rows) ? rows[0] ?? null : rows;
+}
+
 export {
   achieverBucket,
   achieversTable,
@@ -518,6 +573,8 @@ export {
   campaignMembershipsTable,
   plasticReportsTable,
   reportBucket,
+  pickupRequestsTable,
+  pickupBucket,
   userProfilesTable,
   hasSupabaseConfig,
 };

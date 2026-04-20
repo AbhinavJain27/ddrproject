@@ -16,6 +16,7 @@ import CampaignsPage from './pages/CampaignsPage';
 import ReportPlasticPage from './pages/ReportPlasticPage';
 import StartCampaignPage from './pages/StartCampaignPage';
 import AuthPage from './pages/AuthPage';
+import PickupRequestsPage from './pages/PickupRequestsPage';
 import ScrollToTop from './components/ScrollToTop';
 import ScrollToHash from './components/ScrollToHash';
 
@@ -40,6 +41,7 @@ function App() {
           <Route path="/campaigns" element={<CampaignsPage />} />
           <Route path="/campaigns/start" element={<StartCampaignPage />} />
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/pickup" element={<PickupRequestsPage />} />
           <Route path="*" element={<HomePage />} />
         </Routes>
       </div>
